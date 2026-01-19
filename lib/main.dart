@@ -9,7 +9,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NG MOTORISTA - ENTREGAS',
+      title: 'NG Motorista',
       theme: ThemeData(
         primarySwatch: Colors.orange,
         fontFamily: 'Roboto',
@@ -18,7 +18,1204 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: DeliveryDriverApp(),
+      home: SplashScreen(),
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration(seconds: 3.toInt()), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.orange[400],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Logo da NG
+            Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/logo.jpeg',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Text(
+                          'NG',
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[600],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 30),
+            Text(
+              'NG Motorista',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+
+            SizedBox(height: 50),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          // Adicionado SingleChildScrollView para evitar overflow
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 40),
+                Text(
+                  'Bem-vindo ao',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+                Text(
+                  'NG Motorista',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[600],
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Faça entregas e ganhe dinheiro de forma simples e segura.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 60),
+                // Logo centralizada
+                Center(
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'NG',
+                        style: TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[600],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 60),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => PhoneRegistrationScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[400],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    minimumSize: Size(double.infinity, 0),
+                  ),
+                  child: Text(
+                    'Cadastrar',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => DeliveryDriverApp()),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.orange[400]!),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    minimumSize: Size(double.infinity, 0),
+                  ),
+                  child: Text(
+                    'Entrar',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.orange[400],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 30),
+                Center(
+                  child: Text(
+                    'Ao se cadastrar ou acessar sua conta, você concorda com nossos\nTermos de Uso e Política de Privacidade',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PhoneRegistrationScreen extends StatefulWidget {
+  @override
+  _PhoneRegistrationScreenState createState() =>
+      _PhoneRegistrationScreenState();
+}
+
+class _PhoneRegistrationScreenState extends State<PhoneRegistrationScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text('Cadastro'),
+        backgroundColor: Colors.orange[400],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 40),
+                Text(
+                  'Digite seu telefone',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Enviaremos um código de verificação para seu número',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 60),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '🇧🇷',
+                              style: TextStyle(fontSize: 20),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              '+55',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            hintText: '(00) 00000-0000',
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(color: Colors.grey[400]),
+                          ),
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Exemplo: (11) 98765-4321',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+                SizedBox(height: 40), // Espaço antes do botão
+                ElevatedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          if (_phoneController.text.isNotEmpty) {
+                            setState(() {
+                              _isLoading = true;
+                            });
+                            // Simular envio do código
+                            Future.delayed(Duration(seconds: 2), () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => VerificationScreen(
+                                    phoneNumber: _phoneController.text,
+                                  ),
+                                ),
+                              );
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[400],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    minimumSize: Size(double.infinity, 0),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          'Próximo',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+                SizedBox(height: 20), // Espaço extra no final
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class VerificationScreen extends StatefulWidget {
+  final String phoneNumber;
+
+  VerificationScreen({required this.phoneNumber});
+
+  @override
+  _VerificationScreenState createState() => _VerificationScreenState();
+}
+
+class _VerificationScreenState extends State<VerificationScreen> {
+  List<TextEditingController> _controllers =
+      List.generate(6, (index) => TextEditingController());
+  List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  bool _isLoading = false;
+  String _verificationCode = '123456'; // Código simulado
+
+  @override
+  void initState() {
+    super.initState();
+    // Configurar listeners para mover entre campos
+    for (int i = 0; i < _controllers.length; i++) {
+      _controllers[i].addListener(() {
+        if (_controllers[i].text.isNotEmpty && i < _controllers.length - 1) {
+          _focusNodes[i + 1].requestFocus();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  void _verifyCode() {
+    String enteredCode = '';
+    for (var controller in _controllers) {
+      enteredCode += controller.text;
+    }
+
+    if (enteredCode == _verificationCode) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      Future.delayed(Duration(seconds: 1), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DocumentUploadScreen()),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Código incorreto. Tente novamente.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text('Verificação'),
+        backgroundColor: Colors.orange[400],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 40),
+                Text(
+                  'Verifique seu número',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Enviamos um código de 6 dígitos para:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  widget.phoneNumber,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.orange[600],
+                  ),
+                ),
+                SizedBox(height: 60),
+                Center(
+                  child: Text(
+                    'Digite o código de verificação',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
+                // Campos para os 6 dígitos
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(6, (index) {
+                    return SizedBox(
+                      width: 45,
+                      height: 60,
+                      child: TextField(
+                        controller: _controllers[index],
+                        focusNode: _focusNodes[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        maxLength: 1,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.orange[400]!),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty && index < 5) {
+                            _focusNodes[index + 1].requestFocus();
+                          }
+                        },
+                      ),
+                    );
+                  }),
+                ),
+                SizedBox(height: 30),
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Não recebeu o código?',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Reenviar código
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Código reenviado!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Reenviar código',
+                          style: TextStyle(
+                            color: Colors.orange[600],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _verifyCode,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[400],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    minimumSize: Size(double.infinity, 0),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          'Verificar',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+                SizedBox(height: 20), // Espaço extra no final
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DocumentUploadScreen extends StatefulWidget {
+  @override
+  _DocumentUploadScreenState createState() => _DocumentUploadScreenState();
+}
+
+class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
+  bool _crlvUploaded = false;
+  bool _cnhUploaded = false;
+  bool _showPersonalInfo = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showPersonalInfo) {
+      return PersonalInfoScreen();
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text('Documentos'),
+        backgroundColor: Colors.orange[400],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20),
+              Text(
+                'Documentos obrigatórios',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '${_crlvUploaded && _cnhUploaded ? '2/2' : '0/2'} documentos enviados',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 40),
+
+              // CRLV
+              Container(
+                margin: EdgeInsets.only(bottom: 20),
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _crlvUploaded
+                                ? Colors.green[100]
+                                : Colors.orange[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _crlvUploaded ? Icons.check : Icons.description,
+                              color: _crlvUploaded
+                                  ? Colors.green[600]
+                                  : Colors.orange[600],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'CRLV (Documento do veículo)',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                _crlvUploaded
+                                    ? 'Documento enviado'
+                                    : 'Documento obrigatório',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    if (!_crlvUploaded)
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _crlvUploaded = true;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[400],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          minimumSize: Size(double.infinity, 0),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text('Enviar documento'),
+                      ),
+                  ],
+                ),
+              ),
+
+              // CNH com EAR
+              Container(
+                margin: EdgeInsets.only(bottom: 20),
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _cnhUploaded
+                                ? Colors.green[100]
+                                : Colors.orange[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _cnhUploaded ? Icons.check : Icons.credit_card,
+                              color: _cnhUploaded
+                                  ? Colors.green[600]
+                                  : Colors.orange[600],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'CNH com EAR',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                _cnhUploaded
+                                    ? 'Documento enviado'
+                                    : 'Documento obrigatório',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    if (!_cnhUploaded)
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _cnhUploaded = true;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[400],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          minimumSize: Size(double.infinity, 0),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text('Enviar documento'),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Documentos opcionais
+              SizedBox(height: 30),
+              Text(
+                'Documentos opcionais',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.blue[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.account_balance_wallet,
+                              color: Colors.blue[600],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Cartão 99 ou Conta bancária',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Escolha a forma como deseja receber seus rendimentos',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Implementar escolha de método de pagamento
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[50],
+                        foregroundColor: Colors.blue[600],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        minimumSize: Size(double.infinity, 0),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text('Escolher método'),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Dicas
+              SizedBox(height: 30),
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dicas',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      '• Como adicionar EAR >',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '• Os documentos que você enviou serão salvos',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '• Manteremos suas informações seguras e protegidas',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: (_crlvUploaded && _cnhUploaded)
+                    ? () {
+                        setState(() {
+                          _showPersonalInfo = true;
+                        });
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[400],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  minimumSize: Size(double.infinity, 0),
+                ),
+                child: Text(
+                  'Continuar',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20), // Espaço extra no final
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PersonalInfoScreen extends StatefulWidget {
+  @override
+  _PersonalInfoScreenState createState() => _PersonalInfoScreenState();
+}
+
+class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _birthDateController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text('Informações Pessoais'),
+        backgroundColor: Colors.orange[400],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 20),
+                Text(
+                  'Complete seu cadastro',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Preencha seus dados pessoais para finalizar o cadastro',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 40),
+
+                // Nome Completo
+                Text(
+                  'Nome Completo',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    hintText: 'Digite seu nome completo',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, digite seu nome';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 24),
+
+                // Data de Nascimento
+                Text(
+                  'Data de Nascimento',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _birthDateController,
+                  decoration: InputDecoration(
+                    hintText: 'DD/MM/AAAA',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: Icon(Icons.calendar_today),
+                  ),
+                  keyboardType: TextInputType.datetime,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, digite sua data de nascimento';
+                    }
+                    // Validação básica de formato de data
+                    final regex = RegExp(r'^\d{2}/\d{2}/\d{4}$');
+                    if (!regex.hasMatch(value)) {
+                      return 'Formato inválido. Use DD/MM/AAAA';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 24),
+
+                // Email
+                Text(
+                  'E-mail',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    hintText: 'seu@email.com',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, digite seu e-mail';
+                    }
+                    final emailRegex = RegExp(
+                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Digite um e-mail válido';
+                    }
+                    return null;
+                  },
+                ),
+
+                SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      // Cadastro completo - ir para tela principal
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => DeliveryDriverApp()),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[400],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    minimumSize: Size(double.infinity, 0),
+                  ),
+                  child: Text(
+                    'Finalizar Cadastro',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20), // Espaço extra no final
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
