@@ -1054,7 +1054,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ),
                     SizedBox(width: 16),
                     _buildEarningDetail(
-                      title: '/entrega',
+                      title: 'entrega',
                       value: 'R\$${_driverData['earnings']['perRequest']}',
                     ),
                   ],
