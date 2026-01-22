@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 void main() {
@@ -130,59 +131,72 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: 40),
-                Text(
-                  'Bem-vindo(a) à',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-                Text(
-                  'Motorista NG!',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[600],
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Faça entregas e ganhe dinheiro de forma simples e segura.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                SizedBox(height: 60),
-                // Logo centralizada
-                Center(
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 40),
+                  Text(
+                    'Bem-vindo(a) à',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w300,
                     ),
-                    child: Center(
-                      child: Image.asset(
-                        'assets/logo.jpeg',
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.contain,
+                  ),
+                  Text(
+                    'Motorista NG!',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[600],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Faça entregas e ganhe dinheiro de forma simples e segura.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 60),
+                  // Logo centralizada
+                  Center(
+                    child: Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Image.asset(
+                          'assets/logo.jpeg',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: 210),
+                  SizedBox(height: 250),
+                  SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
 
+          // Botões fixos no footer
+          Positioned(
+            bottom: 20,
+            left: 24,
+            right: 24,
+            child: Column(
+              children: [
                 // Botões lado a lado
                 Row(
                   children: [
@@ -250,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                SizedBox(height: 30),
+                SizedBox(height: 16),
                 Center(
                   child: Text(
                     'Ao se cadastrar ou acessar sua conta, você concorda com nossos\nTermos de Uso e Política de Privacidade',
@@ -261,11 +275,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: 20),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -382,13 +395,12 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                             setState(() {
                               _isLoading = true;
                             });
-                            // Simular verificação e ir para verificação facial
+                            // Simular verificação e ir para tela principal
                             Future.delayed(Duration(seconds: 1), () {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      FacialVerificationScreen(),
+                                  builder: (context) => MapScreen(),
                                 ),
                               );
                             });
@@ -662,25 +674,9 @@ class ConnectScreen extends StatefulWidget {
 
 class _ConnectScreenState extends State<ConnectScreen> {
   bool _isOnline = false;
-  bool _showPermissions = false;
 
   @override
   Widget build(BuildContext context) {
-    if (_showPermissions) {
-      return PermissionsScreen(
-        onComplete: () {
-          setState(() {
-            _showPermissions = false;
-          });
-          // Após permissões, ir para a tela principal do app
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MapScreen()),
-          );
-        },
-      );
-    }
-
     return Scaffold(
       body: Container(
         color: Colors.white,
@@ -800,8 +796,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       onPressed: () {
                         setState(() {
                           _isOnline = true;
-                          // Mostrar permissões apenas se for a primeira vez
-                          _showPermissions = true;
+                          // Ir para a tela do mapa quando conectar
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => MapScreen()),
+                          );
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -822,7 +822,6 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       ),
                     ),
                     SizedBox(height: 8),
-                    // Status centralizado
                   ],
                 ),
               ),
@@ -991,25 +990,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                 ),
               SizedBox(height: 20),
 
-              // Logo
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/logo.jpeg',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 30),
-
               // Título
               Text(
                 permission['title'],
@@ -1152,46 +1132,30 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 }
 
-class CustomDateInputFormatter extends TextInputFormatter {
+class _DateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    final newText = newValue.text;
-
-    // Se o texto está vazio, retorna vazio
-    if (newText.isEmpty) {
-      return newValue;
-    }
-
-    // Remove tudo que não é dígito
-    String digitsOnly = newText.replaceAll(RegExp(r'[^0-9]'), '');
+    // Remove todos os caracteres não numéricos
+    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
 
     // Limita a 8 dígitos
-    if (digitsOnly.length > 8) {
-      digitsOnly = digitsOnly.substring(0, 8);
+    if (newText.length > 8) {
+      newText = newText.substring(0, 8);
     }
 
-    // Formata o texto
+    // Formata como DD/MM/AAAA
     String formatted = '';
-
-    for (int i = 0; i < digitsOnly.length; i++) {
+    for (int i = 0; i < newText.length; i++) {
       if (i == 2 || i == 4) {
         formatted += '/';
       }
-      formatted += digitsOnly[i];
-    }
-
-    // Calcula a posição do cursor
-    int cursorPosition = formatted.length;
-
-    // Se o usuário apagou um caractere, ajusta a posição do cursor
-    if (newText.length < oldValue.text.length) {
-      cursorPosition = newValue.selection.baseOffset;
+      formatted += newText[i];
     }
 
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: cursorPosition),
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
@@ -1270,7 +1234,6 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
                   Expanded(child: Container()),
-                  // Status online no cabeçalho
                 ],
               ),
             ),
@@ -1447,6 +1410,19 @@ class _MapScreenState extends State<MapScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => DeliveryDriverApp(initialTab: 'help'),
+                  ),
+                );
+              },
+            ),
+            _buildBottomNavItem(
+              icon: Icons.history,
+              label: 'Histórico',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        DeliveryDriverApp(initialTab: 'history'),
                   ),
                 );
               },
@@ -1813,6 +1789,9 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   bool _showVehicleSelection = false;
   String _selectedVehicle = 'carro'; // 'carro' ou 'moto'
 
+  // Adicionar estas variáveis
+  String _selectedFilter = 'week';
+
   // Veículos cadastrados com CRLV-e
   List<Map<String, dynamic>> _registeredVehicles = [
     {
@@ -1831,7 +1810,75 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     },
   ];
 
-  // Dados do motorista (com informações do código antigo)
+  // Histórico de corridas
+  List<Map<String, dynamic>> _deliveryHistory = [
+    {
+      'id': '001',
+      'customerName': 'Maria Silva',
+      'customerRating': 4.8,
+      'pickupLocation': 'Shopping Center Iguatemi',
+      'deliveryLocation': 'Rua das Flores, 123 - Centro',
+      'distance': 4.2,
+      'duration': '25 min',
+      'value': 18.50,
+      'paymentMethod': 'Cartão de Crédito',
+      'date': '2024-01-20',
+      'time': '14:30',
+      'status': 'completed',
+      'items': ['Documentos', 'Presente'],
+      'vehicleType': 'Carro',
+    },
+    {
+      'id': '002',
+      'customerName': 'João Santos',
+      'customerRating': 5.0,
+      'pickupLocation': 'Avenida Paulista, 1000',
+      'deliveryLocation': 'Rua Augusta, 500 - Consolação',
+      'distance': 3.8,
+      'duration': '20 min',
+      'value': 15.80,
+      'paymentMethod': 'PIX',
+      'date': '2024-01-20',
+      'time': '11:15',
+      'status': 'completed',
+      'items': ['Eletrônico'],
+      'vehicleType': 'Carro',
+    },
+    {
+      'id': '003',
+      'customerName': 'Ana Oliveira',
+      'customerRating': 4.5,
+      'pickupLocation': 'Restaurante Madero',
+      'deliveryLocation': 'Condomínio Green Valley, Apt 302',
+      'distance': 5.5,
+      'duration': '32 min',
+      'value': 22.00,
+      'paymentMethod': 'Dinheiro',
+      'date': '2024-01-19',
+      'time': '19:45',
+      'status': 'completed',
+      'items': ['Alimentos'],
+      'vehicleType': 'Carro',
+    },
+    {
+      'id': '004',
+      'customerName': 'Pedro Costa',
+      'customerRating': 4.9,
+      'pickupLocation': 'Farmácia Droga Raia',
+      'deliveryLocation': 'Hospital São Lucas',
+      'distance': 2.3,
+      'duration': '15 min',
+      'value': 12.00,
+      'paymentMethod': 'Cartão de Débito',
+      'date': '2024-01-19',
+      'time': '09:20',
+      'status': 'completed',
+      'items': ['Medicamentos'],
+      'vehicleType': 'Carro',
+    },
+  ];
+
+  // Dados do motorista
   Map<String, dynamic> _driverData = {
     'name': 'Natanael',
     'rating': 4.97,
@@ -1911,7 +1958,11 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ? Text('Recompensas')
                     : _activeTab == 'withdrawal'
                         ? Text('Saque')
-                        : Text('Ajuda'),
+                        : _activeTab == 'help'
+                            ? Text('Ajuda')
+                            : _activeTab == 'history'
+                                ? Text('Histórico')
+                                : Text('Painel'),
         backgroundColor: Colors.orange[400],
         actions: _activeTab == 'dashboard'
             ? [
@@ -1936,7 +1987,11 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                   ? _buildRewardsScreen()
                   : _activeTab == 'withdrawal'
                       ? _buildWithdrawalScreen()
-                      : _buildHelpScreen(),
+                      : _activeTab == 'help'
+                          ? _buildHelpScreen()
+                          : _activeTab == 'history'
+                              ? _buildHistoryScreen()
+                              : Container(),
     );
   }
 
@@ -2669,92 +2724,262 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildEarningsScreen() {
-    return Column(
-      children: [
-        // Resumo de ganhos
-        Container(
-          padding: EdgeInsets.all(24),
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Ganhos do dia (${DateTime.now().day} jan)',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                ),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cabeçalho
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange[400],
+                borderRadius: BorderRadius.circular(12),
               ),
-              SizedBox(height: 8),
-              Text(
-                'R\$${_driverData['earnings']['today'].toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: _buildEarningSummary(
-                      title: 'Esta semana',
-                      value:
-                          'R\$${_driverData['earnings']['week'].toStringAsFixed(2)}',
-                      color: Colors.green[600]!,
+                  Text(
+                    'Ganhos Totais',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: _buildEarningSummary(
-                      title: 'Taxa do app',
-                      value: '20%',
-                      color: Colors.red[600]!,
+                  SizedBox(height: 8),
+                  Text(
+                    'R\$${_driverData['earnings']['week'].toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'Esta semana',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            SizedBox(height: 20),
+
+            // Resumo por dia
+            Text(
+              'Resumo por Dia',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            ..._buildDailyEarnings(),
+
+            SizedBox(height: 20),
+
+            // Detalhes
+            Text(
+              'Detalhes dos Ganhos',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildEarningDetail('Entregas Completas', '15', '+ R\$225,00'),
+            _buildEarningDetail('Bônus de Horário', '3', '+ R\$45,00'),
+            _buildEarningDetail('Gorjetas', '8', '+ R\$64,50'),
+            _buildEarningDetail('Taxa do App', '', '- R\$47,15'),
+
+            SizedBox(height: 30),
+
+            // Histórico de Saques
+            Text(
+              'Histórico de Saques',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildWithdrawalHistory('15/01/2024', 'R\$350,00', 'Concluído'),
+            _buildWithdrawalHistory('08/01/2024', 'R\$280,50', 'Concluído'),
+            _buildWithdrawalHistory('01/01/2024', 'R\$410,75', 'Concluído'),
+          ],
         ),
-        Expanded(
-          child: Center(
-            child: Text('Central de Ganhos - Em desenvolvimento'),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildEarningSummary({
-    required String title,
-    required String value,
-    required Color color,
-  }) {
+  List<Widget> _buildDailyEarnings() {
+    List<Map<String, dynamic>> dailyEarnings = [
+      {'day': 'Seg', 'amount': 85.50, 'deliveries': 6},
+      {'day': 'Ter', 'amount': 92.25, 'deliveries': 7},
+      {'day': 'Qua', 'amount': 78.00, 'deliveries': 5},
+      {'day': 'Qui', 'amount': 110.75, 'deliveries': 8},
+      {'day': 'Sex', 'amount': 65.50, 'deliveries': 4},
+      {'day': 'Sáb', 'amount': 125.35, 'deliveries': 9},
+      {'day': 'Dom', 'amount': 0.00, 'deliveries': 0},
+    ];
+
+    return dailyEarnings.map((day) {
+      return Container(
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              day['day'],
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'R\$${day['amount'].toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[600],
+                  ),
+                ),
+                Text(
+                  '${day['deliveries']} entregas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildEarningDetail(String title, String count, String value) {
     return Container(
+      margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey[200]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (count.isNotEmpty)
+                Text(
+                  '$count itens',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
+                ),
+            ],
           ),
-          SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: color,
+              color:
+                  value.startsWith('+') ? Colors.green[600] : Colors.red[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWithdrawalHistory(String date, String amount, String status) {
+    Color statusColor =
+        status == 'Concluído' ? Colors.green[600]! : Colors.orange[600]!;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.account_balance_wallet, color: Colors.orange[600]),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  date,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: statusColor.withOpacity(0.3)),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                fontSize: 12,
+                color: statusColor,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -2763,20 +2988,2232 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildRewardsScreen() {
-    return Center(
-      child: Text('Recompensas - Em desenvolvimento'),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cabeçalho
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.orange[400]!, Colors.orange[600]!],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.card_giftcard,
+                    size: 48,
+                    color: Colors.white,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Recompensas Disponíveis',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Complete desafios e ganhe bônus',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+
+            // Recompensas ativas
+            Text(
+              'Recompensas Ativas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildRewardCard(
+              'Entrega Expressa',
+              'Complete 10 entregas em 24h',
+              'R\$50,00',
+              Icons.local_shipping,
+              8,
+              10,
+            ),
+            _buildRewardCard(
+              'Fim de Semana Produtivo',
+              '20 entregas no sábado e domingo',
+              'R\$100,00',
+              Icons.weekend,
+              15,
+              20,
+            ),
+            _buildRewardCard(
+              'Cliente Fiel',
+              '5 entregas para o mesmo cliente',
+              'R\$25,00',
+              Icons.star,
+              3,
+              5,
+            ),
+
+            SizedBox(height: 20),
+
+            // Recompensas conquistadas
+            Text(
+              'Recompensas Conquistadas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildAchievedReward(
+              'Primeira Entrega',
+              'Concluída em 10/01/2024',
+              'R\$10,00',
+            ),
+            _buildAchievedReward(
+              'Entrega Noturna',
+              'Concluída em 12/01/2024',
+              'R\$20,00',
+            ),
+            _buildAchievedReward(
+              'Meta Semanal',
+              'Concluída em 14/01/2024',
+              'R\$75,00',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRewardCard(
+    String title,
+    String description,
+    String reward,
+    IconData icon,
+    int progress,
+    int total,
+  ) {
+    double percentage = progress / total;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: Colors.orange[600]),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                reward,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[600],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: percentage,
+                  backgroundColor: Colors.grey[200],
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.orange[400]!),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text(
+                '$progress/$total',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[400],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              minimumSize: Size(double.infinity, 0),
+            ),
+            child: Text('Continuar Desafio'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievedReward(String title, String date, String reward) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green[600]),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  date,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            reward,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.green[600],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildWithdrawalScreen() {
-    return Center(
-      child: Text('Saque - Em desenvolvimento'),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Saldo disponível
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Saldo Disponível para Saque',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'R\$${_driverData['earnings']['balance'].toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[600],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _driverData['earnings']['balance'] > 0
+                        ? () {
+                            // Abrir modal de saque
+                            _showWithdrawalModal(context);
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[400],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    ),
+                    child: Text(
+                      'Solicitar Saque',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+
+            // Métodos de saque
+            Text(
+              'Métodos de Saque',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildPaymentMethod(
+              'Conta Bancária',
+              'Banco do Brasil ••• 1234',
+              Icons.account_balance,
+            ),
+            _buildPaymentMethod(
+              'PIX',
+              'Chave: 123.456.789-00',
+              Icons.qr_code,
+            ),
+            _buildPaymentMethod(
+              'Carteira Digital',
+              'Disponível em 24h',
+              Icons.wallet,
+            ),
+
+            SizedBox(height: 20),
+
+            // Limites e taxas
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Informações Importantes',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _buildInfoItem('Valor mínimo para saque:', 'R\$ 20,00'),
+                  _buildInfoItem('Taxa por saque:', 'R\$ 1,50'),
+                  _buildInfoItem('Prazo para liberação:', '1-2 dias úteis'),
+                  _buildInfoItem('Limite diário:', 'R\$ 1.000,00'),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // Próximo saque programado
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today, color: Colors.orange[600]),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Próximo Saque Programado',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Segunda-feira, 10:00 AM',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      'Alterar',
+                      style: TextStyle(
+                        color: Colors.orange[600],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethod(String title, String details, IconData icon) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.orange[600]),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  details,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Radio(
+            value: title,
+            groupValue: 'Conta Bancária',
+            onChanged: (value) {},
+            activeColor: Colors.orange[400],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showWithdrawalModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Solicitar Saque',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Valor do Saque',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              TextFormField(
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  prefixText: 'R\$ ',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  hintText: '0,00',
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Método de Recebimento',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              DropdownButtonFormField(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'pix',
+                    child: Text('PIX'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'conta',
+                    child: Text('Conta Bancária'),
+                  ),
+                ],
+                onChanged: (value) {},
+              ),
+              SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Saque solicitado com sucesso!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[400],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  minimumSize: Size(double.infinity, 0),
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  'Confirmar Saque',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildHelpScreen() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cabeçalho
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange[400],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.help,
+                    size: 48,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Central de Ajuda',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Estamos aqui para ajudar',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+
+            // Contato rápido
+            Text(
+              'Contato Rápido',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildContactOption(
+              'Chat Online',
+              'Converse com nosso suporte',
+              Icons.chat,
+              Colors.blue[600]!,
+            ),
+            _buildContactOption(
+              'Telefone',
+              '(11) 99999-9999',
+              Icons.phone,
+              Colors.green[600]!,
+            ),
+            _buildContactOption(
+              'E-mail',
+              'suporte@ngmotorista.com',
+              Icons.email,
+              Colors.orange[600]!,
+            ),
+
+            SizedBox(height: 20),
+
+            // Perguntas frequentes
+            Text(
+              'Perguntas Frequentes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12),
+            _buildFAQItem(
+              'Como recebo minhas entregas?',
+              'Você receberá notificações quando houver entregas disponíveis na sua área.',
+            ),
+            _buildFAQItem(
+              'Quanto tempo leva para o saque?',
+              'O saque leva de 1 a 2 dias úteis para ser processado.',
+            ),
+            _buildFAQItem(
+              'Como altero meu veículo?',
+              'Vá até a tela de perfil e selecione "Trocar Veículo".',
+            ),
+            _buildFAQItem(
+              'O que fazer em caso de problema com uma entrega?',
+              'Entre em contato imediatamente com nosso suporte pelo chat.',
+            ),
+
+            SizedBox(height: 20),
+
+            // Documentos importantes
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Documentos e Links Úteis',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  _buildDocumentLink('Termos de Uso', Icons.description),
+                  _buildDocumentLink('Política de Privacidade', Icons.security),
+                  _buildDocumentLink('Manual do Motorista', Icons.book),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // Avisos
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.red[600]),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Em caso de emergência, ligue para 190 ou 192',
+                      style: TextStyle(
+                        color: Colors.red[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryScreen() {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text('Histórico de Corridas'),
+        backgroundColor: Colors.orange[400],
+        actions: [
+          IconButton(
+            icon: Icon(Icons.filter_list),
+            onPressed: _showFilterModal,
+            tooltip: 'Filtrar',
+          ),
+          IconButton(
+            icon: Icon(Icons.download),
+            onPressed: _exportHistory,
+            tooltip: 'Exportar',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Filtros rápidos
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            color: Colors.grey[50],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('Hoje', 'today'),
+                  SizedBox(width: 8),
+                  _buildFilterChip('Esta semana', 'week'),
+                  SizedBox(width: 8),
+                  _buildFilterChip('Este mês', 'month'),
+                  SizedBox(width: 8),
+                  _buildFilterChip('Todos', 'all'),
+                ],
+              ),
+            ),
+          ),
+
+          // Resumo
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSummaryItem('${_deliveryHistory.length}', 'Corridas'),
+                _buildSummaryItem(_calculateTotalDistance(), 'KM'),
+                _buildSummaryItem(_calculateTotalEarnings(), 'Valor'),
+                _buildSummaryItem(_calculateTotalTime(), 'Tempo'),
+              ],
+            ),
+          ),
+
+          // Lista de corridas
+          Expanded(
+            child: _deliveryHistory.isEmpty
+                ? _buildEmptyHistory()
+                : ListView.builder(
+                    padding: EdgeInsets.all(16),
+                    itemCount: _deliveryHistory.length,
+                    itemBuilder: (context, index) {
+                      return _buildDeliveryCard(_deliveryHistory[index]);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Métodos auxiliares para a tela de histórico:
+
+  Widget _buildFilterChip(String label, String value) {
+    bool isSelected = _selectedFilter == value;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = value;
+          _filterHistory();
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orange[400] : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Colors.orange[400]! : Colors.grey[300]!,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: isSelected ? Colors.white : Colors.grey[600],
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.orange[600],
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[500],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeliveryCard(Map<String, dynamic> delivery) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabeçalho com data/hora e status
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${delivery['date']} • ${delivery['time']}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Text(
+                    'Concluída',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.green[700],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Informações do cliente
+          Padding(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.orange[100],
+                      child: Text(
+                        delivery['customerName'].substring(0, 1),
+                        style: TextStyle(
+                          color: Colors.orange[600],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            delivery['customerName'],
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Icon(Icons.star, size: 14, color: Colors.amber),
+                              SizedBox(width: 4),
+                              Text(
+                                '${delivery['customerRating']} ★',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 12),
+
+                // Localização
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 16, color: Colors.green[600]),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Coleta:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          Text(
+                            delivery['pickupLocation'],
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 16, color: Colors.red[600]),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Entrega:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          Text(
+                            delivery['deliveryLocation'],
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 12),
+
+                // Detalhes da corrida
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildDetailItem(
+                        Icons.directions_car,
+                        '${delivery['distance']} km',
+                        'Distância',
+                      ),
+                      _buildDetailItem(
+                        Icons.access_time,
+                        delivery['duration'],
+                        'Duração',
+                      ),
+                      _buildDetailItem(
+                        Icons.attach_money,
+                        'R\$${delivery['value'].toStringAsFixed(2)}',
+                        'Valor',
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 12),
+
+                // Forma de pagamento e itens
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.credit_card,
+                            size: 16, color: Colors.grey[600]),
+                        SizedBox(width: 6),
+                        Text(
+                          delivery['paymentMethod'],
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (delivery['items'] != null &&
+                        delivery['items'].isNotEmpty)
+                      Row(
+                        children: [
+                          Icon(Icons.inventory,
+                              size: 16, color: Colors.grey[600]),
+                          SizedBox(width: 6),
+                          Text(
+                            delivery['items'].join(', '),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+
+                SizedBox(height: 8),
+
+                // Ações
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _showDeliveryDetails(delivery);
+                        },
+                        icon: Icon(Icons.visibility, size: 16),
+                        label: Text('Ver Detalhes'),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _repeatDelivery(delivery);
+                        },
+                        icon: Icon(Icons.repeat, size: 16),
+                        label: Text('Repetir'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[400],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(IconData icon, String value, String label) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: Colors.orange[600]),
+            SizedBox(width: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey[500],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyHistory() {
     return Center(
-      child: Text('Ajuda - Em desenvolvimento'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.history,
+            size: 80,
+            color: Colors.grey[300],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Nenhuma corrida no histórico',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Suas corridas aparecerão aqui',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => MapScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[400],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            ),
+            child: Text('Começar a trabalhar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _calculateTotalDistance() {
+    double total = 0;
+    for (var delivery in _deliveryHistory) {
+      total += delivery['distance'];
+    }
+    return '${total.toStringAsFixed(1)} km';
+  }
+
+  String _calculateTotalEarnings() {
+    double total = 0;
+    for (var delivery in _deliveryHistory) {
+      total += delivery['value'];
+    }
+    return 'R\$${total.toStringAsFixed(2)}';
+  }
+
+  String _calculateTotalTime() {
+    int totalMinutes = 0;
+    for (var delivery in _deliveryHistory) {
+      String duration = delivery['duration'];
+      List<String> parts = duration.split(' ');
+      if (parts.isNotEmpty) {
+        totalMinutes += int.parse(parts[0]);
+      }
+    }
+
+    if (totalMinutes < 60) {
+      return '$totalMinutes min';
+    } else {
+      int hours = totalMinutes ~/ 60;
+      int minutes = totalMinutes % 60;
+      return minutes > 0 ? '$hours h $minutes min' : '$hours h';
+    }
+  }
+
+  void _filterHistory() {
+    // Implementar lógica de filtro baseado em _selectedFilter
+    setState(() {
+      // Aqui você pode filtrar a lista _deliveryHistory
+      // com base na data selecionada
+    });
+  }
+
+  void _showFilterModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Filtrar Histórico',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+
+              // Filtro por data
+              Text(
+                'Período',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildFilterOption('Hoje', 'today'),
+                  _buildFilterOption('Ontem', 'yesterday'),
+                  _buildFilterOption('Esta semana', 'week'),
+                  _buildFilterOption('Última semana', 'last_week'),
+                  _buildFilterOption('Este mês', 'month'),
+                  _buildFilterOption('Mês passado', 'last_month'),
+                  _buildFilterOption('Personalizado', 'custom'),
+                ],
+              ),
+
+              SizedBox(height: 20),
+
+              // Filtro por status
+              Text(
+                'Status',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  _buildStatusFilter('Concluídas', 'completed'),
+                  _buildStatusFilter('Canceladas', 'cancelled'),
+                  _buildStatusFilter('Em andamento', 'in_progress'),
+                ],
+              ),
+
+              SizedBox(height: 20),
+
+              // Filtro por valor
+              Text(
+                'Valor Mínimo',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              Slider(
+                value: 0,
+                min: 0,
+                max: 50,
+                divisions: 10,
+                label: 'R\$ 0,00',
+                onChanged: (value) {},
+              ),
+
+              Spacer(),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedFilter = 'all';
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text('Limpar Filtros'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.grey[300]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text('Aplicar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[400],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterOption(String label, String value) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _selectedFilter == value,
+      selectedColor: Colors.orange[400],
+      labelStyle: TextStyle(
+        color: _selectedFilter == value ? Colors.white : Colors.black,
+      ),
+      onSelected: (selected) {
+        setState(() {
+          _selectedFilter = value;
+        });
+      },
+    );
+  }
+
+  Widget _buildStatusFilter(String label, String value) {
+    return FilterChip(
+      label: Text(label),
+      selected: false,
+      onSelected: (selected) {},
+      selectedColor: Colors.orange[400],
+      checkmarkColor: Colors.white,
+    );
+  }
+
+  void _exportHistory() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Exportar Histórico',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+              _buildExportOption('PDF', Icons.picture_as_pdf),
+              _buildExportOption('Excel', Icons.table_chart),
+              _buildExportOption('CSV', Icons.grid_on),
+              _buildExportOption('Imprimir', Icons.print),
+              SizedBox(height: 20),
+              Divider(),
+              SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Center(
+                  child: Text(
+                    'Cancelar',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildExportOption(String label, IconData icon) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.orange[600]),
+      title: Text(label),
+      trailing: Icon(Icons.chevron_right),
+      onTap: () {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Histórico exportado em $label'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeliveryDetails(Map<String, dynamic> delivery) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          height: MediaQuery.of(context).size.height * 0.85,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Detalhes da Corrida',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+
+              // Informações principais
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.orange[100],
+                      radius: 30,
+                      child: Text(
+                        delivery['customerName'].substring(0, 1),
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Colors.orange[600],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            delivery['customerName'],
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Icon(Icons.star, size: 16, color: Colors.amber),
+                              SizedBox(width: 4),
+                              Text(
+                                '${delivery['customerRating']} ★',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'ID: ${delivery['id']}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              // Rota e tempo
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildDetailCard(
+                    Icons.location_on,
+                    'Coleta',
+                    delivery['pickupLocation'],
+                    Colors.green[600]!,
+                  ),
+                  Icon(Icons.arrow_forward, color: Colors.grey[400]),
+                  _buildDetailCard(
+                    Icons.location_on,
+                    'Entrega',
+                    delivery['deliveryLocation'],
+                    Colors.red[600]!,
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 20),
+
+              // Estatísticas da corrida
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Estatísticas da Corrida',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildStatDetail(
+                            'Distância', '${delivery['distance']} km'),
+                        _buildStatDetail('Duração', delivery['duration']),
+                        _buildStatDetail('Valor',
+                            'R\$${delivery['value'].toStringAsFixed(2)}'),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildStatDetail('Data', delivery['date']),
+                        _buildStatDetail('Hora', delivery['time']),
+                        _buildStatDetail('Veículo', delivery['vehicleType']),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              // Pagamento e itens
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.credit_card, color: Colors.blue[600]),
+                              SizedBox(width: 8),
+                              Text(
+                                'Pagamento',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            delivery['paymentMethod'],
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          Text(
+                            'R\$${delivery['value'].toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.inventory, color: Colors.green[600]),
+                              SizedBox(width: 8),
+                              Text(
+                                'Itens',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          if (delivery['items'] != null &&
+                              delivery['items'].isNotEmpty)
+                            ...delivery['items'].map((item) {
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  '• $item',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 20),
+
+              // Botões de ação
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _contactCustomer(delivery);
+                      },
+                      icon: Icon(Icons.message, size: 20),
+                      label: Text('Contatar Cliente'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[600],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _repeatDelivery(delivery);
+                      },
+                      icon: Icon(Icons.repeat, size: 20),
+                      label: Text('Repetir Corrida'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[400],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 10),
+
+              TextButton(
+                onPressed: () {
+                  _reportIssue(delivery);
+                },
+                child: Center(
+                  child: Text(
+                    'Reportar Problema com esta corrida',
+                    style: TextStyle(
+                      color: Colors.red[600],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailCard(
+      IconData icon, String title, String content, Color color) {
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color),
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              content,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatDetail(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[500],
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _contactCustomer(Map<String, dynamic> delivery) {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Contatar Cliente'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.phone, color: Colors.green[600]),
+                title: Text('Ligar para ${delivery['customerName']}'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Ligando para o cliente...'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.message, color: Colors.blue[600]),
+                title: Text('Enviar mensagem'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Abrindo conversa...'),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _repeatDelivery(Map<String, dynamic> delivery) {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Repetir Corrida'),
+          content: Text(
+              'Deseja repetir esta corrida para ${delivery['customerName']}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Corrida solicitada novamente!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[400],
+              ),
+              child: Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _reportIssue(Map<String, dynamic> delivery) {
+    Navigator.pop(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Reportar Problema',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Corrida: ${delivery['id']} • ${delivery['customerName']}',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Tipo de Problema',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildIssueOption('Pagamento', 'payment'),
+                  _buildIssueOption('Cliente', 'customer'),
+                  _buildIssueOption('Rota', 'route'),
+                  _buildIssueOption('Itens', 'items'),
+                  _buildIssueOption('Outro', 'other'),
+                ],
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Descrição',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              TextField(
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Descreva o problema...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              Spacer(),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Problema reportado com sucesso!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[400],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  minimumSize: Size(double.infinity, 0),
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text('Enviar Relatório'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildIssueOption(String label, String value) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: false,
+      onSelected: (selected) {},
+    );
+  }
+
+  Widget _buildContactOption(
+      String title, String subtitle, IconData icon, Color color) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {},
+      ),
+    );
+  }
+
+  Widget _buildFAQItem(String question, String answer) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: ExpansionTile(
+        title: Text(
+          question,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              answer,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentLink(String title, IconData icon) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.grey[600]),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: Icon(Icons.open_in_new, size: 16),
+      onTap: () {},
     );
   }
 } // FIM da classe DeliveryDriverApp
@@ -3181,14 +5618,9 @@ class DocumentUploadScreen extends StatefulWidget {
 class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   bool _crlvUploaded = false;
   bool _cnhUploaded = false;
-  bool _showPersonalInfo = false;
 
   @override
   Widget build(BuildContext context) {
-    if (_showPersonalInfo) {
-      return PersonalInfoScreen();
-    }
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -3535,9 +5967,12 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               ElevatedButton(
                 onPressed: (_crlvUploaded && _cnhUploaded)
                     ? () {
-                        setState(() {
-                          _showPersonalInfo = true;
-                        });
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PersonalInfoScreen(),
+                          ),
+                        );
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
@@ -3576,7 +6011,60 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _dateValid = true;
+
+  Widget _buildDateFieldWithFormatter() {
+    return TextFormField(
+      controller: _birthDateController,
+      decoration: InputDecoration(
+        hintText: 'DD/MM/AAAA',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        prefixIcon: Icon(Icons.calendar_today),
+      ),
+      keyboardType: TextInputType.datetime,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(8), // DDMMAAAA = 8 dígitos
+        _DateInputFormatter(),
+      ],
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Por favor, digite sua data de nascimento';
+        }
+
+        // Verificar se tem o formato completo
+        if (value.length < 10) {
+          return 'Data incompleta. Use DD/MM/AAAA';
+        }
+
+        // Validação básica de formato de data
+        final regex = RegExp(r'^\d{2}/\d{2}/\d{4}$');
+        if (!regex.hasMatch(value)) {
+          return 'Formato inválido. Use DD/MM/AAAA';
+        }
+
+        // Validação de data real (opcional)
+        try {
+          final parts = value.split('/');
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+
+          if (day < 1 || day > 31) return 'Dia inválido';
+          if (month < 1 || month > 12) return 'Mês inválido';
+          if (year < 1900 || year > DateTime.now().year) return 'Ano inválido';
+
+          // Verificar se é uma data válida
+          DateTime(year, month, day);
+        } catch (e) {
+          return 'Data inválida';
+        }
+
+        return null;
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3645,7 +6133,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 ),
                 SizedBox(height: 24),
 
-                // Data de Nascimento - CORRIGIDA
+                // Data de Nascimento
                 Text(
                   'Data de Nascimento',
                   style: TextStyle(
@@ -3655,66 +6143,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   ),
                 ),
                 SizedBox(height: 8),
-                TextFormField(
-                  controller: _birthDateController,
-                  decoration: InputDecoration(
-                    hintText: 'DD/MM/AAAA',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: _dateValid ? Colors.grey[300]! : Colors.red,
-                      ),
-                    ),
-                    prefixIcon: Icon(Icons.calendar_today),
-                    errorText: _dateValid ? null : 'Data inválida',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CustomDateInputFormatter(),
-                  ],
-                  onChanged: (value) {
-                    if (value.length == 10) {
-                      try {
-                        final parts = value.split('/');
-                        final day = int.parse(parts[0]);
-                        final month = int.parse(parts[1]);
-                        final year = int.parse(parts[2]);
 
-                        if (day < 1 ||
-                            day > 31 ||
-                            month < 1 ||
-                            month > 12 ||
-                            year < 1900) {
-                          setState(() {
-                            _dateValid = false;
-                          });
-                        } else {
-                          setState(() {
-                            _dateValid = true;
-                          });
-                        }
-                      } catch (e) {
-                        setState(() {
-                          _dateValid = false;
-                        });
-                      }
-                    } else {
-                      setState(() {
-                        _dateValid = true;
-                      });
-                    }
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, digite sua data de nascimento';
-                    }
-                    if (value.length < 10) {
-                      return 'Data incompleta. Use DD/MM/AAAA';
-                    }
-                    return null;
-                  },
-                ),
+                // Usar o campo com formatter
+                _buildDateFieldWithFormatter(),
 
                 SizedBox(height: 24),
 
@@ -3754,18 +6185,18 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 SizedBox(height: 40),
                 ElevatedButton(
                   onPressed: () {
-                    if (_formKey.currentState!.validate() && _dateValid) {
+                    if (_formKey.currentState!.validate()) {
                       // Cadastro completo - ir para tela de permissões
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => PermissionsScreen(
                             onComplete: () {
-                              // Após permissões, ir para a tela de conexão
+                              // Após permissões, ir para a tela do mapa
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => ConnectScreen()),
+                                    builder: (context) => MapScreen()),
                               );
                             },
                           ),
@@ -3777,7 +6208,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     backgroundColor: Colors.orange[400],
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     padding: EdgeInsets.symmetric(vertical: 18),
                     minimumSize: Size(double.infinity, 0),
