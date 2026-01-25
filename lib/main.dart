@@ -2,25 +2,156 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
+import 'package:provider/provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() {
   runApp(MyApp());
 }
 
+// Gerenciador de Conexão
+class ConnectionManager extends ChangeNotifier {
+  bool _isOnline = false;
+
+  bool get isOnline => _isOnline;
+
+  void setOnline(bool value) {
+    _isOnline = value;
+    notifyListeners();
+  }
+
+  void toggleConnection() {
+    _isOnline = !_isOnline;
+    notifyListeners();
+  }
+}
+
+// Gerenciador de Ganhos e Taxas (ATUALIZADO)
+class EarningsManager extends ChangeNotifier {
+  double _dailyEarnings = 0.0;
+  double _appFeeDebt = 0.0; // Dívida acumulada da taxa
+  double _currentAppFee = 0.0; // Taxa atual calculada das corridas
+  bool _appFeePaid = true; // Indica se a taxa foi paga
+  bool _hasActiveDebt = false; // Indica se há dívida ativa de 125.35
+  List<double> _completedDeliveries = [];
+
+  // Taxa fixa do app (valor mencionado: 125.35)
+  static const double FIXED_APP_FEE = 125.35;
+
+  double get dailyEarnings => _dailyEarnings;
+  double get appFeeDebt => _appFeeDebt;
+  bool get appFeePaid => _appFeePaid;
+  bool get hasActiveDebt => _hasActiveDebt;
+
+  // Método para adicionar uma entrega completada
+  void addCompletedDelivery(double deliveryValue) {
+    _completedDeliveries.add(deliveryValue);
+    _updateEarnings();
+    notifyListeners();
+  }
+
+  // Método para calcular e atualizar ganhos
+  void _updateEarnings() {
+    // Calcular ganhos brutos do dia
+    double grossEarnings =
+        _completedDeliveries.fold(0, (sum, element) => sum + element);
+
+    // Lógica da taxa do app:
+    // 1. Se não há dívida ativa (125.35), calcular 15% normalmente
+    // 2. Se há dívida ativa, manter 125.35 até que seja paga
+
+    if (!_hasActiveDebt) {
+      // Calcular taxa do app (15%) apenas se não houver dívida ativa
+      _currentAppFee = grossEarnings * 0.15;
+      _appFeeDebt = _currentAppFee;
+    } else {
+      // Se há dívida ativa, manter o valor fixo
+      _appFeeDebt = FIXED_APP_FEE;
+      _currentAppFee = 0.0; // Não calcular nova taxa enquanto há dívida
+    }
+
+    // Verificar se a taxa acumulada atingiu ou ultrapassou 125.35
+    if (_currentAppFee >= FIXED_APP_FEE && !_hasActiveDebt) {
+      _hasActiveDebt = true;
+      _appFeeDebt = FIXED_APP_FEE;
+      _currentAppFee = 0.0;
+    }
+
+    // Calcular ganhos líquidos
+    _dailyEarnings = grossEarnings - _appFeeDebt;
+  }
+
+  // Método para pagar a taxa do app (ZERAR TUDO)
+  void payAppFee() {
+    // Zerar completamente a dívida
+    _appFeeDebt = 0.0;
+    _currentAppFee = 0.0;
+    _hasActiveDebt = false;
+    _appFeePaid = true;
+
+    // Recalcular ganhos sem a taxa
+    double grossEarnings =
+        _completedDeliveries.fold(0, (sum, element) => sum + element);
+    _dailyEarnings = grossEarnings;
+
+    notifyListeners();
+  }
+
+  // Método para iniciar novo dia (manter dívida se existir)
+  void resetDailyEarnings() {
+    // Não limpar as entregas se houver dívida ativa
+    if (!_hasActiveDebt) {
+      _completedDeliveries.clear();
+    }
+    // Recalcular apenas os ganhos do dia
+    _updateEarnings();
+    notifyListeners();
+  }
+
+  // Método para simular novo dia (chamado por timer ou manualmente)
+  void startNewDay() {
+    // Manter a dívida se existir, apenas limpar entregas do dia
+    _completedDeliveries.clear();
+    _updateEarnings();
+    notifyListeners();
+  }
+
+  // Método para obter ganhos brutos
+  double get grossEarnings {
+    return _completedDeliveries.fold(0, (sum, element) => sum + element);
+  }
+
+  // Método para obter número de corridas
+  int get numberOfDeliveries {
+    return _completedDeliveries.length;
+  }
+
+  // Método para verificar se deve mostrar alerta de pagamento
+  bool get shouldShowPaymentAlert {
+    return _appFeeDebt >= FIXED_APP_FEE || _hasActiveDebt;
+  }
+}
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NG Motorista',
-      theme: ThemeData(
-        primarySwatch: Colors.orange,
-        fontFamily: 'Roboto',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.orange,
-          elevation: 0,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ConnectionManager()),
+        ChangeNotifierProvider(create: (context) => EarningsManager()),
+      ],
+      child: MaterialApp(
+        title: 'NG Motorista',
+        theme: ThemeData(
+          primarySwatch: Colors.orange,
+          fontFamily: 'Roboto',
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.orange,
+            elevation: 0,
+          ),
         ),
+        home: SplashScreen(),
       ),
-      home: SplashScreen(),
     );
   }
 }
@@ -45,69 +176,80 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.orange[600]!,
-              Colors.orange[500]!,
-              Colors.deepOrange[400]!,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(60),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 20,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Image.asset(
-                    'assets/logo.jpeg',
-                    width: 125,
-                    height: 125,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Text(
-                        'NG',
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[600],
+      body: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.orange[600]!,
+                  Colors.orange[500]!,
+                  Colors.deepOrange[400]!,
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(60),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 20,
+                          offset: Offset(0, 10),
                         ),
-                      );
-                    },
+                      ],
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        'assets/logo.jpeg',
+                        width: 125,
+                        height: 125,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text(
+                            'NG',
+                            style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[600],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 30),
+                  const Text(
+                    'Motorista NG',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w200,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 30),
-              const Text(
-                'Motorista NG',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w200,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 180),
-              const Text(
+            ),
+          ),
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Container(
+              alignment: Alignment.center,
+              child: const Text(
                 'Motorista NG',
                 style: TextStyle(
                   fontSize: 12,
@@ -115,9 +257,9 @@ class _SplashScreenState extends State<SplashScreen> {
                   color: Colors.white,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -134,7 +276,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Conteúdo superior (título e logo)
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -167,7 +308,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 60),
-                    // Logo centralizada
                     Center(
                       child: Container(
                         width: 150,
@@ -225,18 +365,14 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-
-          // Botões e texto de termos POSICIONADOS NO FINAL
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Botões lado a lado
                 Row(
                   children: [
-                    // Botão Entrar
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
@@ -266,7 +402,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    // Botão Cadastrar
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
@@ -299,10 +434,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
-                // Texto dos termos quase encostando no final
                 Container(
                   alignment: Alignment.bottomCenter,
                   child: Text(
@@ -323,7 +455,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// TELA DE LOGIN APENAS COM TELEFONE
 class PhoneLoginScreen extends StatefulWidget {
   @override
   _PhoneLoginScreenState createState() => _PhoneLoginScreenState();
@@ -435,7 +566,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                             setState(() {
                               _isLoading = true;
                             });
-                            // CORREÇÃO: Ir para verificação facial
                             Future.delayed(const Duration(seconds: 1), () {
                               Navigator.pushReplacement(
                                 context,
@@ -482,7 +612,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                         ),
                 ),
                 const SizedBox(height: 20),
-                // Link para cadastro
                 Center(
                   child: TextButton(
                     onPressed: () {
@@ -512,7 +641,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   }
 }
 
-// TELA DE VERIFICAÇÃO FACIAL
 class FacialVerificationScreen extends StatefulWidget {
   @override
   _FacialVerificationScreenState createState() =>
@@ -561,8 +689,6 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 60),
-
-              // Ícone/Imagem da verificação facial
               Container(
                 width: 200,
                 height: 200,
@@ -599,7 +725,6 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-
               if (_isVerified)
                 Column(
                   children: [
@@ -614,11 +739,9 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // Após verificação facial, ir para tela de conexão
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                              builder: (context) => ConnectScreen()),
+                          MaterialPageRoute(builder: (context) => MapScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -664,7 +787,6 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                     setState(() {
                       _isVerifying = true;
                     });
-                    // Simular processo de verificação facial
                     Future.delayed(const Duration(seconds: 3), () {
                       setState(() {
                         _isVerifying = false;
@@ -688,7 +810,6 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                     ),
                   ),
                 ),
-
               SizedBox(height: 30),
               if (!_isVerified && !_isVerifying)
                 Text(
@@ -707,254 +828,6 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
   }
 }
 
-// TELA DE CONEXÃO (com permissões após cadastro)
-class ConnectScreen extends StatefulWidget {
-  @override
-  _ConnectScreenState createState() => _ConnectScreenState();
-}
-
-class _ConnectScreenState extends State<ConnectScreen> {
-  bool _isOnline = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        color: Colors.white,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Cabeçalho
-              Container(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.orange[100],
-                      child: Text(
-                        'N',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[600],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Natanael',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Icon(Icons.star, size: 14, color: Colors.amber),
-                              SizedBox(width: 4),
-                              Text(
-                                '4.97 ★',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Divider(height: 1),
-
-              // Áreas de entrega
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.all(16),
-                  children: [
-                    // Seção de ganhos
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'R\$0,00',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Ganhos de hoje',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 20),
-
-                    // Áreas de entrega
-                    Text(
-                      'Áreas com alta demanda',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    _buildAreaItem('Shopping', '1.1~1.3x', 'Alta'),
-                    _buildAreaItem('TABOLEI', '1.2~2.0x', 'Média'),
-                    _buildAreaItem('JARDIM I', '1.2~1.6x', 'Alta'),
-                    _buildAreaItem(
-                        'Uniavan Av. Marginal Oeste', '1.5~2.2x', 'Média'),
-                    _buildAreaItem('Rio Pecan', '1.1~1.8x', 'Baixa'),
-                  ],
-                ),
-              ),
-
-              // Botão conectar
-              Container(
-                padding: EdgeInsets.all(16),
-                color: Colors.white,
-                child: Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _isOnline = true;
-                          // Ir para a tela do mapa quando conectar
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => MapScreen()),
-                          );
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[400],
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        minimumSize: Size(double.infinity, 0),
-                      ),
-                      child: Text(
-                        'Conectar',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAreaItem(String name, String multiplier, String demand) {
-    Color demandColor;
-    switch (demand) {
-      case 'Alta':
-        demandColor = Colors.red[400]!;
-        break;
-      case 'Média':
-        demandColor = Colors.orange[400]!;
-        break;
-      default:
-        demandColor = Colors.green[400]!;
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: demandColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  'Demanda: $demand',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.green[200]!),
-            ),
-            child: Text(
-              multiplier,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.green[700],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// TELA DE PERMISSÕES
 class PermissionsScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
@@ -989,7 +862,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     {
       'title': 'Lembrete: solicitações de entregas',
       'description':
-          'Detectamos que suas configurações atuais de bateria podem impedir você de receber solicitações de entregas. Para que as solicitações de entregas sejam recebidas adequadamente, você deve permitir a execução deste aplicativo em segundo plano.',
+          'Detectamos que suas configurações atualizas de bateria podem impedir você de receber solicitações de entregas. Para que as solicitações de entregas sejam recebidas adequadamente, você deve permitir a execução deste aplicativo em segundo plano.',
       'options': ['Permitir', 'Não permitir'],
       'type': 'background',
     },
@@ -1001,7 +874,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         _currentPermission++;
       });
     } else {
-      // Todas as permissões concedidas
       widget.onComplete();
     }
   }
@@ -1030,8 +902,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   icon: Icon(Icons.chevron_left),
                 ),
               SizedBox(height: 20),
-
-              // Título
               Text(
                 permission['title'],
                 style: TextStyle(
@@ -1040,8 +910,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                 ),
               ),
               SizedBox(height: 15),
-
-              // Descrição (se existir)
               if (permission['description'] != null)
                 Padding(
                   padding: EdgeInsets.only(bottom: 30),
@@ -1053,8 +921,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     ),
                   ),
                 ),
-
-              // Opções específicas para localização
               if (permission['type'] == 'location')
                 Column(
                   children: [
@@ -1064,8 +930,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     SizedBox(height: 30),
                   ],
                 ),
-
-              // Botões de opções
               ...permission['options'].asMap().entries.map((entry) {
                 int index = entry.key;
                 String option = entry.value;
@@ -1103,8 +967,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   ),
                 );
               }).toList(),
-
-              // Contador de progresso
               SizedBox(height: 30),
               Center(
                 child: Text(
@@ -1177,15 +1039,12 @@ class _DateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    // Remove todos os caracteres não numéricos
     String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
 
-    // Limita a 8 dígitos
     if (newText.length > 8) {
       newText = newText.substring(0, 8);
     }
 
-    // Formata como DD/MM/AAAA
     String formatted = '';
     for (int i = 0; i < newText.length; i++) {
       if (i == 2 || i == 4) {
@@ -1201,94 +1060,81 @@ class _DateInputFormatter extends TextInputFormatter {
   }
 }
 
-// TELA DO MAPA (Primeira tela após login)
 class MapScreen extends StatefulWidget {
   @override
   _MapScreenState createState() => _MapScreenState();
 }
 
 class _MapScreenState extends State<MapScreen> {
-  bool _isOnline = false;
-  double _dailyEarnings = 0.0;
-  double _appFee = 0.0; // Taxa do app - COMEÇA EM ZERO
-  double _totalEarnings = 0.0;
-  List<double> _completedDeliveries = [];
-
-  // Balão de ganhos do dia
+  bool _isMapReady = false;
   bool _showEarningsBalloon = true;
-
-  // CORREÇÃO: Variáveis para área em alta movível
-  bool _showHighDemandAreas = true;
-  bool _isDragging = false;
-  Offset _highDemandPosition = Offset(20, 140);
-
-  // Variável para controlar pagamento da taxa
-  bool _appFeePaid = true; // Inicialmente paga (taxa zerada)
+  late GoogleMapController mapController;
+  final LatLng _center = const LatLng(-26.990, -48.635); // Camboriú coordinates
+  final Set<Marker> _markers = {};
 
   @override
   void initState() {
     super.initState();
-    // Inicializar valores
-    _updateEarnings();
+    // Inicializa o gerenciador de ganhos ao iniciar a tela do mapa
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final earningsManager = context.read<EarningsManager>();
+      earningsManager.resetDailyEarnings();
+    });
+
+    // Adiciona um marcador inicial
+    _markers.add(
+      Marker(
+        markerId: MarkerId('current_location'),
+        position: _center,
+        infoWindow: InfoWindow(title: 'Sua Localização'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+      ),
+    );
   }
 
-  void _updateEarnings() {
-    // Calcular ganhos brutos (soma de todas as corridas)
-    double grossEarnings =
-        _completedDeliveries.fold(0, (sum, element) => sum + element);
-
-    // Calcular taxa do app (15%) apenas se não foi paga
-    if (!_appFeePaid) {
-      _appFee = grossEarnings * 0.15;
-    } else {
-      _appFee = 0.0; // Taxa zerada após pagamento
-    }
-
-    // Calcular ganhos líquidos
-    _totalEarnings = grossEarnings - _appFee;
-
-    // Atualizar ganhos do dia
-    _dailyEarnings = _totalEarnings;
+  void _onMapCreated(GoogleMapController controller) {
+    mapController = controller;
+    setState(() {
+      _isMapReady = true;
+    });
   }
 
   void _completeDelivery(double deliveryValue) {
-    setState(() {
-      _completedDeliveries.add(deliveryValue);
-      _appFeePaid = false; // Nova corrida, taxa acumula novamente
-      _updateEarnings();
-    });
+    final earningsManager = context.read<EarningsManager>();
+    earningsManager.addCompletedDelivery(deliveryValue);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Corrida adicionada aos ganhos do dia!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
-  // Método para pagar a taxa do app
   void _payAppFee() {
-    setState(() {
-      _appFee = 0.0;
-      _appFeePaid = true;
-      _updateEarnings();
+    final earningsManager = context.read<EarningsManager>();
+    earningsManager.payAppFee();
 
-      // Mostrar mensagem de pagamento confirmado
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 10),
-              Text('Pagamento da taxa confirmado! Taxa zerada: R\$0,00'),
-            ],
-          ),
-          backgroundColor: Colors.green[600],
-          duration: Duration(seconds: 3),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Taxa de R\$125,35 paga com sucesso! Dívida zerada.'),
+          ],
         ),
-      );
-    });
+        backgroundColor: Colors.green[600],
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   void _showDeliveryCompletionDialog() {
     showDialog(
       context: context,
       builder: (context) {
-        double deliveryValue =
-            20.0 + Random().nextDouble() * 10.0; // Valor aleatório entre 20-30
+        double deliveryValue = 20.0 + Random().nextDouble() * 10.0;
         return AlertDialog(
           title: Text('Corrida Finalizada'),
           content: Column(
@@ -1336,32 +1182,6 @@ class _MapScreenState extends State<MapScreen> {
                   color: Colors.green[600],
                 ),
               ),
-              SizedBox(height: 16),
-              // Mostrar taxa acumulada total
-              if (_appFee > 0)
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange[200]!),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.attach_money, color: Colors.orange[600]),
-                      SizedBox(width: 8),
-                      Text(
-                        'Taxa acumulada: R\$${_appFee.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
           actions: [
@@ -1373,12 +1193,6 @@ class _MapScreenState extends State<MapScreen> {
               onPressed: () {
                 _completeDelivery(deliveryValue);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Corrida adicionada aos ganhos do dia!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange[400],
@@ -1391,144 +1205,22 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Método para mostrar todas as áreas em alta
-  void _showAllHighDemandAreas(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(20),
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: Column(
-            children: [
-              Text(
-                'Todas as Áreas com Alta Demanda',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  children: [
-                    _buildDetailedAreaItem(
-                        'Shopping', '1.1~1.3x', 'Alta', '5-10 min'),
-                    _buildDetailedAreaItem(
-                        'TABOLEI', '1.2~2.0x', 'Média', '10-15 min'),
-                    _buildDetailedAreaItem(
-                        'JARDIM I', '1.2~1.6x', 'Alta', '5-8 min'),
-                    _buildDetailedAreaItem('Uniavan Av. Marginal Oeste',
-                        '1.5~2.2x', 'Média', '15-20 min'),
-                    _buildDetailedAreaItem(
-                        'Rio Pecan', '1.1~1.8x', 'Baixa', '20-25 min'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailedAreaItem(
-      String name, String multiplier, String demand, String waitTime) {
-    Color demandColor;
-    switch (demand) {
-      case 'Alta':
-        demandColor = Colors.red[400]!;
-        break;
-      case 'Média':
-        demandColor = Colors.orange[400]!;
-        break;
-      default:
-        demandColor = Colors.green[400]!;
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: demandColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
-                    SizedBox(width: 4),
-                    Text(
-                      'Tempo de espera: $waitTime',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.green[200]!),
-            ),
-            child: Text(
-              multiplier,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.green[700],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final connectionManager = Provider.of<ConnectionManager>(context);
+    final earningsManager = Provider.of<EarningsManager>(context);
+
+    bool _isOnline = connectionManager.isOnline;
+    double _dailyEarnings = earningsManager.dailyEarnings;
+    double _appFeeDebt = earningsManager.appFeeDebt;
+    bool _appFeePaid = earningsManager.appFeePaid;
+    int _numberOfDeliveries = earningsManager.numberOfDeliveries;
+    double _grossEarnings = earningsManager.grossEarnings;
+    bool _shouldShowPaymentAlert = earningsManager.shouldShowPaymentAlert;
+
     return Scaffold(
       body: Column(
         children: [
-          // Cabeçalho simplificado
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1588,8 +1280,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
                   Expanded(child: Container()),
-                  // Botão para pagar taxa do app
-                  if (_appFee > 0)
+                  if (_shouldShowPaymentAlert)
                     GestureDetector(
                       onTap: _payAppFee,
                       child: Container(
@@ -1605,7 +1296,7 @@ class _MapScreenState extends State<MapScreen> {
                                 size: 16, color: Colors.white),
                             SizedBox(width: 4),
                             Text(
-                              'Pagar Taxa',
+                              'Pagar Taxa: R\$${_appFeeDebt.toStringAsFixed(2)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white,
@@ -1620,58 +1311,54 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-
-          // Mapa principal
           Expanded(
             child: Stack(
               children: [
-                // Simulação do mapa
-                Container(
-                  color: Colors.grey[100],
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.map, size: 100, color: Colors.grey[300]),
-                        SizedBox(height: 16),
-                        Text(
-                          _isOnline
-                              ? 'Aguardando entregas...'
-                              : 'Conecte-se para receber entregas',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[500],
+                // Mapa do Google Maps
+                GoogleMap(
+                  onMapCreated: _onMapCreated,
+                  initialCameraPosition: CameraPosition(
+                    target: _center,
+                    zoom: 14.0,
+                  ),
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: true,
+                  mapType: MapType.normal,
+                  onLongPress: (LatLng latLng) {
+                    // Adiciona um novo marcador quando o usuário pressiona longo no mapa
+                    setState(() {
+                      _markers.add(
+                        Marker(
+                          markerId: MarkerId('marker_${_markers.length}'),
+                          position: latLng,
+                          infoWindow: InfoWindow(
+                            title: 'Entrega ${_markers.length}',
+                            snippet: 'Toque para ver detalhes',
                           ),
                         ),
-                        SizedBox(height: 8),
-                        if (!_isOnline)
-                          Text(
-                            'Toque no botão "Conectar" abaixo',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                        if (_isOnline)
-                          ElevatedButton(
-                            onPressed: _showDeliveryCompletionDialog,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange[400],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 32, vertical: 12),
-                            ),
-                            child: Text('Simular Corrida Completa'),
-                          ),
-                      ],
-                    ),
-                  ),
+                      );
+                    });
+                  },
                 ),
 
-                // Balão de ganhos do dia (centralizado na parte superior)
+                if (!_isMapReady)
+                  Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 20),
+                          Text('Carregando mapa...'),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Balão de ganhos
                 if (_showEarningsBalloon && _isOnline)
                   Positioned(
                     top: 20,
@@ -1703,7 +1390,6 @@ class _MapScreenState extends State<MapScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Cabeçalho do balão
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -1723,10 +1409,7 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                               ],
                             ),
-
                             SizedBox(height: 12),
-
-                            // Valor principal
                             Text(
                               'R\$${_dailyEarnings.toStringAsFixed(2)}',
                               style: TextStyle(
@@ -1735,16 +1418,13 @@ class _MapScreenState extends State<MapScreen> {
                                 color: Colors.green[700],
                               ),
                             ),
-
                             SizedBox(height: 8),
-
-                            // Informações detalhadas
                             Container(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(30),
                               ),
                               child: Column(
                                 children: [
@@ -1760,14 +1440,14 @@ class _MapScreenState extends State<MapScreen> {
                                         ),
                                       ),
                                       Text(
-                                        _appFeePaid
-                                            ? 'R\$0,00 (PAGA)'
-                                            : '-R\$${_appFee.toStringAsFixed(2)}',
+                                        _appFeeDebt > 0
+                                            ? '-R\$${_appFeeDebt.toStringAsFixed(2)}'
+                                            : 'R\$0,00',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: _appFeePaid
-                                              ? Colors.green[600]
-                                              : Colors.red[600],
+                                          color: _appFeeDebt > 0
+                                              ? Colors.red[600]
+                                              : Colors.green[600],
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -1786,7 +1466,7 @@ class _MapScreenState extends State<MapScreen> {
                                         ),
                                       ),
                                       Text(
-                                        'R\$${(_dailyEarnings + _appFee).toStringAsFixed(2)}',
+                                        'R\$${_grossEarnings.toStringAsFixed(2)}',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[700],
@@ -1808,7 +1488,7 @@ class _MapScreenState extends State<MapScreen> {
                                               BorderRadius.circular(12),
                                         ),
                                         child: Text(
-                                          '${_completedDeliveries.length} corridas',
+                                          '$_numberOfDeliveries corridas',
                                           style: TextStyle(
                                             fontSize: 10,
                                             color: Colors.orange[700],
@@ -1821,13 +1501,42 @@ class _MapScreenState extends State<MapScreen> {
                                 ],
                               ),
                             ),
+                            if (_shouldShowPaymentAlert) SizedBox(height: 12),
+                            if (_shouldShowPaymentAlert)
+                              GestureDetector(
+                                onTap: _payAppFee,
+                                child: Container(
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.red[200]!),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.warning,
+                                          size: 16, color: Colors.red[600]),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'PAGAR TAXA: R\$125,35',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.red[600],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ),
                   ),
 
-                // Botão para mostrar/ocultar balão
+                // Botão para mostrar/ocultar balão de ganhos
                 if (_isOnline)
                   Positioned(
                     top: 20,
@@ -1849,169 +1558,31 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
 
-                // CORREÇÃO: Áreas de entrega (quando online) - MOVÍVEL E MINIMIZÁVEL
-                if (_isOnline && _showHighDemandAreas)
+                // Botão para simular corrida (apenas para teste)
+                if (_isOnline)
                   Positioned(
-                    top: _highDemandPosition.dy,
-                    left: _highDemandPosition.dx,
-                    child: GestureDetector(
-                      onPanUpdate: (details) {
-                        setState(() {
-                          _isDragging = true;
-                          _highDemandPosition = Offset(
-                            _highDemandPosition.dx + details.delta.dx,
-                            _highDemandPosition.dy + details.delta.dy,
-                          );
-                        });
-                      },
-                      onPanEnd: (details) {
-                        Future.delayed(Duration(milliseconds: 100), () {
-                          setState(() {
-                            _isDragging = false;
-                          });
-                        });
-                      },
-                      child: Container(
-                        width: 150,
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: _isDragging
-                              ? Colors.white.withOpacity(0.8)
-                              : Colors.white.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: _isDragging ? 10 : 6,
-                              offset: Offset(0, _isDragging ? 4 : 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Cabeçalho com botão de minimizar
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.local_shipping,
-                                        size: 14, color: Colors.orange[600]),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Áreas em Alta',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _showHighDemandAreas = false;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.minimize,
-                                      size: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                            _buildAreaItem('Shopping', '1.1~1.3x', 'Alta'),
-                            _buildAreaItem('TABOLEI', '1.2~2.0x', 'Média'),
-                            // Botão para expandir/ver mais áreas
-                            if (!_isDragging)
-                              TextButton(
-                                onPressed: () {
-                                  _showAllHighDemandAreas(context);
-                                },
-                                child: Text(
-                                  'Ver todas...',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.orange[600],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // CORREÇÃO: Botão para restaurar a área quando minimizada
-                if (_isOnline && !_showHighDemandAreas)
-                  Positioned(
-                    top: 140,
-                    left: 20,
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _showHighDemandAreas = true;
-                          _highDemandPosition =
-                              Offset(20, 140); // Resetar posição
-                        });
-                      },
-                      child: Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.local_shipping,
-                                size: 14, color: Colors.orange[600]),
-                            SizedBox(width: 6),
-                            Text(
-                              'Áreas em Alta',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    bottom: 100,
+                    right: 20,
+                    child: FloatingActionButton(
+                      onPressed: _showDeliveryCompletionDialog,
+                      backgroundColor: Colors.orange[400],
+                      child: Icon(Icons.local_shipping, color: Colors.white),
                     ),
                   ),
               ],
             ),
           ),
-
-          // Botão Conectar/Desconectar
           Container(
             padding: EdgeInsets.all(16),
             color: Colors.white,
             child: ElevatedButton(
               onPressed: () {
-                setState(() {
-                  _isOnline = !_isOnline;
-                  if (_isOnline) {
+                connectionManager.toggleConnection();
+                if (connectionManager.isOnline) {
+                  setState(() {
                     _showEarningsBalloon = true;
-                  }
-                });
+                  });
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor:
@@ -2113,73 +1684,6 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildAreaItem(String name, String multiplier, String demand) {
-    Color demandColor;
-    switch (demand) {
-      case 'Alta':
-        demandColor = Colors.red[400]!;
-        break;
-      case 'Média':
-        demandColor = Colors.orange[400]!;
-        break;
-      default:
-        demandColor = Colors.green[400]!;
-    }
-
-    return Container(
-        margin: EdgeInsets.only(bottom: 6),
-        child: Row(
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: demandColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    'Demanda: $demand',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Text(
-                multiplier,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
-                ),
-              ),
-            ),
-          ],
-        ));
-  }
-
   Widget _buildBottomNavItem({
     required IconData icon,
     required String label,
@@ -2209,7 +1713,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-// NOVA CLASSE: Seleção de Veículos cadastrados (dos CRLVs)
 class VehicleSelectionScreen extends StatefulWidget {
   final Function(Map<String, dynamic>) onVehicleSelected;
   final List<Map<String, dynamic>> registeredVehicles;
@@ -2453,7 +1956,6 @@ class _VehicleSelectionScreenState extends State<VehicleSelectionScreen> {
   }
 }
 
-// TELA DE PAGAMENTO VIA PIX
 class PixPaymentScreen extends StatefulWidget {
   final double amountDue;
 
@@ -2479,7 +1981,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
       _isLoading = true;
     });
 
-    // Simular geração de chave PIX aleatória
     Future.delayed(Duration(seconds: 1), () {
       final random = Random();
       final key =
@@ -2504,7 +2005,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
       ),
     );
 
-    // Resetar após 2 segundos
     Future.delayed(Duration(seconds: 2), () {
       if (mounted) {
         setState(() {
@@ -2530,7 +2030,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Ícone PIX
             Container(
               margin: EdgeInsets.only(top: 40, bottom: 20),
               padding: EdgeInsets.all(24),
@@ -2544,8 +2043,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                 color: Colors.blue[600],
               ),
             ),
-
-            // Valor devido
             Text(
               'Valor Devido',
               style: TextStyle(
@@ -2563,8 +2060,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
               ),
             ),
             SizedBox(height: 30),
-
-            // Chave PIX
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -2597,8 +2092,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                           textAlign: TextAlign.center,
                         ),
                         SizedBox(height: 20),
-
-                        // Botão copiar
                         ElevatedButton.icon(
                           onPressed: _copyToClipboard,
                           icon: Icon(_isCopied ? Icons.check : Icons.copy),
@@ -2618,10 +2111,7 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                 ],
               ),
             ),
-
             SizedBox(height: 30),
-
-            // QR Code
             Text(
               'Ou escaneie o QR Code',
               style: TextStyle(
@@ -2630,7 +2120,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
               ),
             ),
             SizedBox(height: 16),
-
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -2647,7 +2136,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
               ),
               child: Column(
                 children: [
-                  // Simulação de QR Code
                   Container(
                     width: 200,
                     height: 200,
@@ -2677,7 +2165,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                     ),
                   ),
                   SizedBox(height: 20),
-
                   Text(
                     'Aponte a câmera do seu\naplicativo bancário',
                     textAlign: TextAlign.center,
@@ -2689,10 +2176,7 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                 ],
               ),
             ),
-
             SizedBox(height: 30),
-
-            // Instruções
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -2728,10 +2212,7 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                 ],
               ),
             ),
-
             SizedBox(height: 30),
-
-            // Botões de ação
             Row(
               children: [
                 Expanded(
@@ -2768,7 +2249,6 @@ class _PixPaymentScreenState extends State<PixPaymentScreen> {
                 ),
               ],
             ),
-
             SizedBox(height: 20),
           ],
         ),
@@ -2828,9 +2308,8 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   String _currentScreen = 'main';
   String _activeTab = 'dashboard';
   bool _showVehicleSelection = false;
-  String _selectedVehicle = 'carro'; // 'carro' ou 'moto'
+  String _selectedVehicle = 'carro';
 
-  // Variáveis para filtros
   String _selectedFilter = 'all';
   Map<String, dynamic> _filterSettings = {
     'period': 'all',
@@ -2842,7 +2321,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   DateTime? _customStartDate;
   DateTime? _customEndDate;
 
-  // Veículos cadastrados com CRLV-e
   List<Map<String, dynamic>> _registeredVehicles = [
     {
       'type': 'carro',
@@ -2860,7 +2338,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     },
   ];
 
-  // Dados do motorista
   Map<String, dynamic> _driverData = {
     'name': 'Natanael',
     'rating': 4.97,
@@ -2878,12 +2355,11 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
       'lastDelivery': 15.40,
       'perRequest': 25.07,
       'balance': 125.35,
-      'debt': 125.35, // Débito da taxa do app (negativo)
+      'debt': 125.35,
     },
     'notifications': 16,
   };
 
-  // Tipos de itens mais transportados
   List<Map<String, dynamic>> _itemTypes = [
     {'name': 'Documentos', 'percentage': 35, 'icon': Icons.description},
     {'name': 'Eletrônicos', 'percentage': 25, 'icon': Icons.devices},
@@ -2965,15 +2441,20 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildDashboard() {
+    final earningsManager = Provider.of<EarningsManager>(context);
+    double _dailyEarnings = earningsManager.dailyEarnings;
+    double _appFeeDebt = earningsManager.appFeeDebt;
+    int _numberOfDeliveries = earningsManager.numberOfDeliveries;
+    double _grossEarnings = earningsManager.grossEarnings;
+    bool _shouldShowPaymentAlert = earningsManager.shouldShowPaymentAlert;
+
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Painel com informações do arquivo
           Container(
             padding: EdgeInsets.all(16),
             child: Column(
               children: [
-                // Saldo principal
                 Container(
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -2991,14 +2472,13 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'R\$66,65',
+                        'R\$${_dailyEarnings.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 20),
-                      // Última corrida
                       Container(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
@@ -3010,14 +2490,14 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Valor da última corrida',
+                              'Corridas hoje',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[600],
                               ),
                             ),
                             Text(
-                              'R\$12,65 >',
+                              '$_numberOfDeliveries >',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -3026,7 +2506,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           ],
                         ),
                       ),
-                      // Taxa da semana
                       Container(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
@@ -3038,23 +2517,27 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Taxa (esta semana)',
+                              'Taxa do App (15%)',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[600],
                               ),
                             ),
                             Text(
-                              '8.39% >',
+                              _appFeeDebt > 0
+                                  ? '-R\$${_appFeeDebt.toStringAsFixed(2)} >'
+                                  : 'R\$0,00 (PAGA) >',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
+                                color: _appFeeDebt > 0
+                                    ? Colors.red[600]
+                                    : Colors.green[600],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Ganhos da semana
                       Container(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
@@ -3066,7 +2549,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Ganhos desta semana',
+                              'Ganhos esta semana',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[600],
@@ -3082,7 +2565,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           ],
                         ),
                       ),
-                      // Solicitações
                       Container(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
@@ -3117,7 +2599,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      // Botão Ver Central de ganhos
                       ElevatedButton(
                         onPressed: () {
                           setState(() {
@@ -3144,10 +2625,66 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ],
                   ),
                 ),
-
                 SizedBox(height: 16),
-
-                // Recompensas
+                if (_shouldShowPaymentAlert)
+                  GestureDetector(
+                    onTap: () {
+                      earningsManager.payAppFee();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Taxa de R\$125,35 paga com sucesso!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: 16),
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.red[600]),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'TAXA DO APP PENDENTE',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red[600],
+                                  ),
+                                ),
+                                Text(
+                                  'Valor fixo: R\$125,35',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.red[600],
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Toque para pagar agora e zerar a dívida',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red[400],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios,
+                              size: 16, color: Colors.red[400]),
+                        ],
+                      ),
+                    ),
+                  ),
                 Container(
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -3249,10 +2786,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ],
                   ),
                 ),
-
                 SizedBox(height: 16),
-
-                // Tipos de itens mais transportados
                 Container(
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -3334,14 +2868,9 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ],
                   ),
                 ),
-
                 SizedBox(height: 16),
-
-                // Notificações
                 GestureDetector(
-                  onTap: () {
-                    // Navegação para notificações
-                  },
+                  onTap: () {},
                   child: Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -3395,8 +2924,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ],
             ),
           ),
-
-          // Estatísticas
           Container(
             margin: EdgeInsets.symmetric(horizontal: 13),
             padding: EdgeInsets.all(1),
@@ -3460,8 +2987,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ],
             ),
           ),
-
-          // Veículo atual
           Container(
             margin: EdgeInsets.all(16),
             padding: EdgeInsets.all(20),
@@ -3548,8 +3073,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ],
             ),
           ),
-
-          // Saldo atual com alerta de débito
           Container(
             margin: EdgeInsets.symmetric(horizontal: 16),
             padding: EdgeInsets.all(20),
@@ -3576,26 +3099,23 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  'R\$${_driverData['earnings']['balance'].toStringAsFixed(2)}',
+                  'R\$${_dailyEarnings.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: _driverData['earnings']['debt'] > 0
-                        ? Colors.red[600]
-                        : Colors.green[600],
+                    color:
+                        _appFeeDebt > 0 ? Colors.red[600] : Colors.green[600],
                   ),
                 ),
                 SizedBox(height: 8),
-                if (_driverData['earnings']['debt'] > 0)
+                if (_shouldShowPaymentAlert)
                   GestureDetector(
                     onTap: () {
-                      // Navegar para a tela de PIX para pagar débito
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PixPaymentScreen(
-                            amountDue: _driverData['earnings']['debt'],
-                          ),
+                      earningsManager.payAppFee();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Taxa de R\$125,35 paga com sucesso!'),
+                          backgroundColor: Colors.green,
                         ),
                       );
                     },
@@ -3615,10 +3135,10 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Você tem um débito de R\$${_driverData['earnings']['debt'].toStringAsFixed(2)}',
+                                  'DÉBITO DO APP: R\$125,35',
                                   style: TextStyle(
                                     color: Colors.red[600],
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 SizedBox(height: 4),
@@ -3641,8 +3161,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ],
             ),
           ),
-
-          // Botão para voltar ao mapa
           Container(
             margin: EdgeInsets.all(16),
             child: ElevatedButton(
@@ -3674,13 +3192,10 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ),
             ),
           ),
-
-          // Botão de Sair
           Container(
             margin: EdgeInsets.fromLTRB(16, 0, 16, 20),
             child: OutlinedButton(
               onPressed: () {
-                // Confirmação antes de sair
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -3694,7 +3209,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ),
                       ElevatedButton(
                         onPressed: () {
-                          // Redirecionar para a tela de login
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
@@ -3785,7 +3299,12 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildEarningsScreen() {
-    double _appFeeDebt = _driverData['earnings']['debt'];
+    final earningsManager = Provider.of<EarningsManager>(context);
+    double _appFeeDebt = earningsManager.appFeeDebt;
+    double _dailyEarnings = earningsManager.dailyEarnings;
+    int _numberOfDeliveries = earningsManager.numberOfDeliveries;
+    double _grossEarnings = earningsManager.grossEarnings;
+    bool _shouldShowPaymentAlert = earningsManager.shouldShowPaymentAlert;
 
     return SingleChildScrollView(
       child: Padding(
@@ -3793,7 +3312,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho com saldo
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -3803,7 +3321,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               child: Column(
                 children: [
                   Text(
-                    _appFeeDebt > 0 ? 'Débito Pendente' : 'Saldo Disponível',
+                    _appFeeDebt > 0 ? 'DÉBITO DO APP' : 'Saldo Disponível',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -3812,7 +3330,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'R\$${_appFeeDebt.abs().toStringAsFixed(2)}',
+                    'R\$${_dailyEarnings.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -3820,25 +3338,23 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ),
                   ),
                   Text(
-                    _appFeeDebt > 0 ? 'TAXA DO APP' : 'Esta semana',
+                    _appFeeDebt > 0 ? 'TAXA FIXA: R\$125,35' : 'Hoje',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
-
-                  // Botão de pagar débito se houver
-                  if (_appFeeDebt > 0)
+                  if (_shouldShowPaymentAlert)
                     Padding(
                       padding: EdgeInsets.only(top: 16),
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PixPaymentScreen(
-                                amountDue: _appFeeDebt,
-                              ),
+                          earningsManager.payAppFee();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text('Taxa de R\$125,35 paga com sucesso!'),
+                              backgroundColor: Colors.green,
                             ),
                           );
                         },
@@ -3851,23 +3367,20 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           padding: EdgeInsets.symmetric(
                               horizontal: 32, vertical: 12),
                         ),
-                        child: Text('Pagar Débito via PIX'),
+                        child: Text('PAGAR DÉBITO'),
                       ),
                     ),
                 ],
               ),
             ),
-
-            // Alerta de débito
-            if (_appFeeDebt > 0)
+            if (_shouldShowPaymentAlert)
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PixPaymentScreen(
-                        amountDue: _appFeeDebt,
-                      ),
+                  earningsManager.payAppFee();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Taxa de R\$125,35 paga com sucesso!'),
+                      backgroundColor: Colors.green,
                     ),
                   );
                 },
@@ -3888,7 +3401,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Débito Pendente',
+                              'DÉBITO DO APP PENDENTE',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -3896,7 +3409,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                               ),
                             ),
                             Text(
-                              'Taxa do App: R\$${_appFeeDebt.toStringAsFixed(2)}',
+                              'Valor fixo: R\$125,35',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.red[600],
@@ -3904,7 +3417,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Toque para pagar via PIX',
+                              'Toque para pagar agora e zerar a dívida',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.red[400],
@@ -3919,10 +3432,45 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                   ),
                 ),
               ),
-
             SizedBox(height: 20),
-
-            // Resumo por dia
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Resumo do Dia',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  _buildEarningDetail(
+                      'Corridas Completas',
+                      '$_numberOfDeliveries',
+                      '+ R\$${_grossEarnings.toStringAsFixed(2)}'),
+                  _buildEarningDetail('Taxa do App', '',
+                      '- R\$${_appFeeDebt.toStringAsFixed(2)}',
+                      isDebt: true),
+                  _buildEarningDetail('Ganhos Líquidos', '',
+                      'R\$${_dailyEarnings.toStringAsFixed(2)}',
+                      isTotal: true),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
             Text(
               'Resumo por Dia',
               style: TextStyle(
@@ -3932,10 +3480,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
             ),
             SizedBox(height: 12),
             ..._buildDailyEarnings(),
-
             SizedBox(height: 20),
-
-            // Detalhes
             Text(
               'Detalhes dos Ganhos',
               style: TextStyle(
@@ -3947,13 +3492,10 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
             _buildEarningDetail('Entregas Completas', '15', '+ R\$225,00'),
             _buildEarningDetail('Bônus de Horário', '3', '+ R\$45,00'),
             _buildEarningDetail('Gorjetas', '8', '+ R\$64,50'),
-            _buildEarningDetail('Taxa do App (15%)', '',
-                '- R\$${_appFeeDebt.toStringAsFixed(2)}',
+            _buildEarningDetail(
+                'Taxa do App', '', '- R\$${_appFeeDebt.toStringAsFixed(2)}',
                 isDebt: true),
-
             SizedBox(height: 30),
-
-            // Histórico de Saques
             Text(
               'Histórico de Saques',
               style: TextStyle(
@@ -4034,7 +3576,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildEarningDetail(String title, String count, String value,
-      {bool isDebt = false}) {
+      {bool isDebt = false, bool isTotal = false}) {
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(12),
@@ -4071,11 +3613,13 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: isDebt
-                  ? Colors.red[600]
-                  : (value.startsWith('+')
-                      ? Colors.green[600]
-                      : Colors.red[600]),
+              color: isTotal
+                  ? Colors.green[600]
+                  : isDebt
+                      ? Colors.red[600]
+                      : (value.startsWith('+')
+                          ? Colors.green[600]
+                          : Colors.red[600]),
             ),
           ),
         ],
@@ -4154,7 +3698,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -4193,8 +3736,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ),
             ),
             SizedBox(height: 20),
-
-            // Recompensas ativas
             Text(
               'Recompensas Ativas',
               style: TextStyle(
@@ -4227,10 +3768,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               3,
               5,
             ),
-
             SizedBox(height: 20),
-
-            // Recompensas conquistadas
             Text(
               'Recompensas Conquistadas',
               style: TextStyle(
@@ -4416,13 +3954,16 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildWithdrawalScreen() {
+    final earningsManager = Provider.of<EarningsManager>(context);
+    double _dailyEarnings = earningsManager.dailyEarnings;
+    bool _shouldShowPaymentAlert = earningsManager.shouldShowPaymentAlert;
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Saldo disponível
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -4447,7 +3988,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'R\$${_driverData['earnings']['balance'].toStringAsFixed(2)}',
+                    'R\$${_dailyEarnings.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -4456,9 +3997,8 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _driverData['earnings']['balance'] > 0
+                    onPressed: _dailyEarnings > 0
                         ? () {
-                            // Abrir modal de saque
                             _showWithdrawalModal(context);
                           }
                         : null,
@@ -4482,9 +4022,66 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                 ],
               ),
             ),
+            if (_shouldShowPaymentAlert)
+              GestureDetector(
+                onTap: () {
+                  earningsManager.payAppFee();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Taxa de R\$125,35 paga com sucesso!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red[600]),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'DÉBITO DO APP',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red[600],
+                              ),
+                            ),
+                            Text(
+                              'Valor fixo: R\$125,35',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.red[600],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Toque para pagar agora',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 16, color: Colors.red[400]),
+                    ],
+                  ),
+                ),
+              ),
             SizedBox(height: 20),
-
-            // Métodos de saque
             Text(
               'Métodos de Saque',
               style: TextStyle(
@@ -4508,10 +4105,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               'Disponível em 24h',
               Icons.wallet,
             ),
-
             SizedBox(height: 20),
-
-            // Limites e taxas
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -4538,10 +4132,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                 ],
               ),
             ),
-
             SizedBox(height: 20),
-
-            // Próximo saque programado
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -4647,30 +4238,32 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
 
   Widget _buildInfoItem(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
+        padding: EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ));
   }
 
   void _showWithdrawalModal(BuildContext context) {
+    final earningsManager = Provider.of<EarningsManager>(context);
+    double _dailyEarnings = earningsManager.dailyEarnings;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -4710,6 +4303,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ),
               SizedBox(height: 8),
               TextFormField(
+                initialValue: _dailyEarnings.toStringAsFixed(2),
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   prefixText: 'R\$ ',
@@ -4782,13 +4376,15 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 
   Widget _buildHelpScreen() {
+    final earningsManager = Provider.of<EarningsManager>(context);
+    bool _shouldShowPaymentAlert = earningsManager.shouldShowPaymentAlert;
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -4828,9 +4424,66 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                 ],
               ),
             ),
+            if (_shouldShowPaymentAlert)
+              GestureDetector(
+                onTap: () {
+                  earningsManager.payAppFee();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Taxa de R\$125,35 paga com sucesso!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red[600]),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'TAXA DO APP PENDENTE',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red[600],
+                              ),
+                            ),
+                            Text(
+                              'Valor fixo: R\$125,35',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.red[600],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Toque para pagar agora',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 16, color: Colors.red[400]),
+                    ],
+                  ),
+                ),
+              ),
             SizedBox(height: 20),
-
-            // Contato rápido
             Text(
               'Contato Rápido',
               style: TextStyle(
@@ -4857,10 +4510,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               Icons.email,
               Colors.orange[600]!,
             ),
-
             SizedBox(height: 20),
-
-            // Perguntas frequentes
             Text(
               'Perguntas Frequentes',
               style: TextStyle(
@@ -4885,10 +4535,11 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               'O que fazer em caso de problema com uma entrega?',
               'Entre em contato imediatamente com nosso suporte pelo chat.',
             ),
-
+            _buildFAQItem(
+              'Como funciona a taxa do app de R\$125,35?',
+              'A taxa é cobrada quando seus ganhos acumulados atingem R\$125,35 (15% das corridas). Após pagar, a dívida é zerada e começa a contar novamente das próximas corridas.',
+            ),
             SizedBox(height: 20),
-
-            // Documentos importantes
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -4913,10 +4564,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                 ],
               ),
             ),
-
             SizedBox(height: 20),
-
-            // Avisos
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -4946,9 +4594,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     );
   }
 
-  // MÉTODOS PARA HISTÓRICO E FILTROS
-
-  // Lista de todas as entregas
   List<Map<String, dynamic>> _getAllDeliveries() {
     return [
       {
@@ -5044,42 +4689,27 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     ];
   }
 
-  // Método para aplicar filtros
   List<Map<String, dynamic>> _getFilteredDeliveries() {
     List<Map<String, dynamic>> allDeliveries = _getAllDeliveries();
-
-    // Filtrar por período
     List<Map<String, dynamic>> filteredByPeriod =
         _filterByPeriod(allDeliveries);
-
-    // Filtrar por status
     List<Map<String, dynamic>> filteredByStatus =
         _filterByStatus(filteredByPeriod);
-
-    // Filtrar por valor mínimo
     List<Map<String, dynamic>> filteredByValue =
         _filterByValue(filteredByStatus);
-
     return filteredByValue;
   }
 
-  // Método para filtrar por período
   List<Map<String, dynamic>> _filterByPeriod(
       List<Map<String, dynamic>> deliveries) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(Duration(days: 1));
-
-    // Obter início da semana (segunda-feira)
     final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
     final startOfLastWeek = startOfWeek.subtract(Duration(days: 7));
-    final endOfLastWeek = startOfWeek.subtract(Duration(days: 1));
-
-    // Obter início do mês
     final startOfMonth = DateTime(now.year, now.month, 1);
     final startOfLastMonth = DateTime(now.month == 1 ? now.year - 1 : now.year,
         now.month == 1 ? 12 : now.month - 1, 1);
-    final endOfLastMonth = startOfMonth.subtract(Duration(days: 1));
 
     switch (_filterSettings['period']) {
       case 'today':
@@ -5126,7 +4756,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
           final startDate = DateTime(_customStartDate!.year,
               _customStartDate!.month, _customStartDate!.day);
           final endDate = DateTime(_customEndDate!.year, _customEndDate!.month,
-              _customEndDate!.day + 1); // +1 para incluir o dia final
+              _customEndDate!.day + 1);
 
           return deliveries.where((delivery) {
             final deliveryDate = (delivery['date'] as DateTime);
@@ -5142,7 +4772,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     }
   }
 
-  // Método para filtrar por status
   List<Map<String, dynamic>> _filterByStatus(
       List<Map<String, dynamic>> deliveries) {
     final List<String> statusFilter = _filterSettings['status'];
@@ -5156,7 +4785,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     }).toList();
   }
 
-  // Método para filtrar por valor mínimo
   List<Map<String, dynamic>> _filterByValue(
       List<Map<String, dynamic>> deliveries) {
     final double minValue = _filterSettings['minValue'];
@@ -5170,7 +4798,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
     }).toList();
   }
 
-  // Método para calcular resumo baseado no filtro
   String _calculateTotalEarnings() {
     final filtered = _getFilteredDeliveries();
     double total = 0;
@@ -5233,7 +4860,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
       ),
       body: Column(
         children: [
-          // Filtros rápidos
           Container(
             padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             color: Colors.grey[50],
@@ -5252,8 +4878,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ),
             ),
           ),
-
-          // Resumo
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -5276,8 +4900,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ],
             ),
           ),
-
-          // Lista de corridas
           Expanded(
             child: filteredDeliveries.isEmpty
                 ? _buildEmptyHistory()
@@ -5371,7 +4993,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cabeçalho com data/hora e status
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -5410,8 +5031,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
               ],
             ),
           ),
-
-          // Informações do cliente
           Padding(
             padding: EdgeInsets.all(12),
             child: Column(
@@ -5459,10 +5078,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ),
                   ],
                 ),
-
                 SizedBox(height: 12),
-
-                // Localização
                 Row(
                   children: [
                     Icon(Icons.location_on, size: 16, color: Colors.green[600]),
@@ -5492,9 +5108,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ),
                   ],
                 ),
-
                 SizedBox(height: 8),
-
                 Row(
                   children: [
                     Icon(Icons.location_on, size: 16, color: Colors.red[600]),
@@ -5524,10 +5138,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ),
                   ],
                 ),
-
                 SizedBox(height: 12),
-
-                // Detalhes da corrida
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -5555,10 +5166,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ],
                   ),
                 ),
-
                 SizedBox(height: 12),
-
-                // Forma de pagamento e itens
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -5596,10 +5204,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ),
                   ],
                 ),
-
                 SizedBox(height: 8),
-
-                // Ações
                 Row(
                   children: [
                     Expanded(
@@ -5759,8 +5364,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ],
                     ),
                     SizedBox(height: 20),
-
-                    // Filtro por data
                     Text(
                       'Período',
                       style: TextStyle(
@@ -5786,7 +5389,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                             'Personalizado', 'custom', setModalState),
                       ],
                     ),
-
                     if (_filterSettings['period'] == 'custom') ...[
                       SizedBox(height: 16),
                       Row(
@@ -5887,10 +5489,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                         ],
                       ),
                     ],
-
                     SizedBox(height: 20),
-
-                    // Filtro por status
                     Text(
                       'Status',
                       style: TextStyle(
@@ -5910,10 +5509,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                             'Em andamento', 'in_progress', setModalState),
                       ],
                     ),
-
                     SizedBox(height: 20),
-
-                    // Filtro por valor
                     Text(
                       'Valor Mínimo',
                       style: TextStyle(
@@ -5943,9 +5539,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                         color: Colors.grey[600],
                       ),
                     ),
-
                     SizedBox(height: 30),
-
                     Row(
                       children: [
                         Expanded(
@@ -6173,8 +5767,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ],
                   ),
                   SizedBox(height: 20),
-
-                  // Informações principais
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -6234,10 +5826,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ],
                     ),
                   ),
-
                   SizedBox(height: 20),
-
-                  // Rota e tempo
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
@@ -6246,7 +5835,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     padding: EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        // Coleta
                         Row(
                           children: [
                             Container(
@@ -6286,8 +5874,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                             ),
                           ],
                         ),
-
-                        // Linha divisória
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: Container(
@@ -6300,8 +5886,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                             ),
                           ),
                         ),
-
-                        // Entrega
                         Row(
                           children: [
                             Container(
@@ -6344,10 +5928,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ],
                     ),
                   ),
-
                   SizedBox(height: 20),
-
-                  // Estatísticas da corrida
                   Text(
                     'Estatísticas da Corrida',
                     style: TextStyle(
@@ -6400,10 +5981,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ],
                     ),
                   ),
-
                   SizedBox(height: 20),
-
-                  // Pagamento e itens
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
@@ -6411,7 +5989,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                     ),
                     child: Column(
                       children: [
-                        // Pagamento
                         Container(
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -6456,8 +6033,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                             ],
                           ),
                         ),
-
-                        // Itens
                         Container(
                           padding: EdgeInsets.all(16),
                           child: Row(
@@ -6503,10 +6078,7 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
                       ],
                     ),
                   ),
-
                   SizedBox(height: 24),
-
-                  // Botões de ação
                   Column(
                     children: [
                       ElevatedButton.icon(
@@ -6872,7 +6444,6 @@ class _DeliveryDriverAppState extends State<DeliveryDriverApp> {
   }
 }
 
-// Classes restantes do fluxo de cadastro
 class PhoneRegistrationScreen extends StatefulWidget {
   @override
   _PhoneRegistrationScreenState createState() =>
@@ -6984,7 +6555,6 @@ class _PhoneRegistrationScreenState extends State<PhoneRegistrationScreen> {
                             setState(() {
                               _isLoading = true;
                             });
-                            // Simular envio do código
                             Future.delayed(Duration(seconds: 2), () {
                               Navigator.push(
                                 context,
@@ -7309,8 +6879,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 ),
               ),
               SizedBox(height: 40),
-
-              // CRLV
               Container(
                 margin: EdgeInsets.only(bottom: 20),
                 padding: EdgeInsets.all(20),
@@ -7396,8 +6964,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   ],
                 ),
               ),
-
-              // CNH com EAR
               Container(
                 margin: EdgeInsets.only(bottom: 20),
                 padding: EdgeInsets.all(20),
@@ -7483,8 +7049,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   ],
                 ),
               ),
-
-              // Documentos opcionais
               SizedBox(height: 30),
               Text(
                 'Documentos opcionais',
@@ -7552,9 +7116,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                     ),
                     SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () {
-                        // Implementar escolha de método de pagamento
-                      },
+                      onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[50],
                         foregroundColor: Colors.blue[600],
@@ -7569,8 +7131,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   ],
                 ),
               ),
-
-              // Dicas
               SizedBox(height: 30),
               Container(
                 padding: EdgeInsets.all(20),
@@ -7616,7 +7176,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   ],
                 ),
               ),
-
               SizedBox(height: 40),
               ElevatedButton(
                 onPressed: (_crlvUploaded && _cnhUploaded)
@@ -7679,7 +7238,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       keyboardType: TextInputType.datetime,
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(8), // DDMMAAAA = 8 dígitos
+        LengthLimitingTextInputFormatter(8),
         _DateInputFormatter(),
       ],
       validator: (value) {
@@ -7687,18 +7246,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           return 'Por favor, digite sua data de nascimento';
         }
 
-        // Verificar se tem o formato completo
         if (value.length < 10) {
           return 'Data incompleta. Use DD/MM/AAAA';
         }
 
-        // Validação básica de formato de data
         final regex = RegExp(r'^\d{2}/\d{2}/\d{4}$');
         if (!regex.hasMatch(value)) {
           return 'Formato inválido. Use DD/MM/AAAA';
         }
 
-        // Validação de data real (opcional)
         try {
           final parts = value.split('/');
           final day = int.parse(parts[0]);
@@ -7709,7 +7265,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           if (month < 1 || month > 12) return 'Mês inválido';
           if (year < 1900 || year > DateTime.now().year) return 'Ano inválido';
 
-          // Verificar se é uma data válida
           DateTime(year, month, day);
         } catch (e) {
           return 'Data inválida';
@@ -7758,8 +7313,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   ),
                 ),
                 SizedBox(height: 40),
-
-                // Nome Completo
                 Text(
                   'Nome Completo',
                   style: TextStyle(
@@ -7786,8 +7339,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   },
                 ),
                 SizedBox(height: 24),
-
-                // Data de Nascimento
                 Text(
                   'Data de Nascimento',
                   style: TextStyle(
@@ -7797,13 +7348,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   ),
                 ),
                 SizedBox(height: 8),
-
-                // Usar o campo com formatter
                 _buildDateFieldWithFormatter(),
-
                 SizedBox(height: 24),
-
-                // Email
                 Text(
                   'E-mail',
                   style: TextStyle(
@@ -7835,18 +7381,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     return null;
                   },
                 ),
-
                 SizedBox(height: 40),
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      // Cadastro completo - ir para tela de permissões
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => PermissionsScreen(
                             onComplete: () {
-                              // Após permissões, ir para a tela do mapa
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
