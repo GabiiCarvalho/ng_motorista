@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "331328119106",
+    "project_id": "ng-motorista",
+    "storage_bucket": "ng-motorista.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:331328119106:android:54c9dd62ef2bedbe9028db",
+        "android_client_info": {
+          "package_name": "com.ngexpress.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1iK6CICrlAixhB0MlpmJVT4Vwh4G4rXw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

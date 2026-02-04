@@ -22,3 +22,9 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+dependencies {
+    classpath 'com.google.gms:google-services:4.4.4' apply false 
+    classpath 'com.android.tools.build:gradle:7.3.0'
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+}

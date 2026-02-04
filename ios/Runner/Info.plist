@@ -2,6 +2,30 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Localização -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Precisamos da sua localização para encontrar entrgas próxima</string>
+	<key>NSLocationAlwaysWhenInUseUsageDescription</key>
+	<string>Precisamos da sua localização em segundo plano para receber notificações de entregas</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Precisamos da sua localização em segundo plano para receber notificaçõesde entregas</string>
+
+	<!-- CAMERA -->
+	<key>NSCameraUsageDescription</key>
+	<string>Precisamos da câmera para verificação facial e documentos</string>
+
+	<!-- Galeria -->
+	<key>NSPhotolibraryUsageDescription</key>
+	<string>Precisamos acessar sua galeria para enviar documentos</string>
+
+	<!-- Background modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>location</string>
+		<string>remote-notification</string>
+	</array>
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

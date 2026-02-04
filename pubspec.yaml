@@ -10,6 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
   
+  flutter_polyline_points: ^3.1.0
+
+  geoflutterfire_plus: ^0.0.34
+
   # Gerenciamento de estado
   provider: ^6.0.5
   
@@ -19,12 +23,16 @@ dependencies:
   cloud_firestore: ^6.1.2
   firebase_storage: ^13.0.6
   firebase_messaging: ^16.1.1
+  firebase_database: ^12.1.2
+
+# Google Sign In
+  google_sign_in: ^7.0.0
   
   # Localização
   geolocator: ^14.0.2
 
   # Google Maps
-  google_maps_flutter: ^2.2.5
+  google_maps_flutter: ^2.14.0
   
   # Imagens
   image_picker: ^1.0.4
@@ -38,6 +46,16 @@ dependencies:
   # Formulários com máscara
   mask_text_input_formatter: ^2.5.0
 
+   # UI
+  flutter_localizations:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.3.8
+
+  
+  cupertino_icons: ^1.0.8
+  connectivity_plus: ^7.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -46,3 +64,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - themes/
