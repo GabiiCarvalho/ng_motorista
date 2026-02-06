@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ng_motorista/authentication/login_screen.dart';
 import '../global/global_var.dart';
 import '/widgets/loading_dialog.dart';
+import 'package:ng_motorista/methods/common_methods.dart';
 
 class SignUpScreenDriver extends StatefulWidget {
   const SignUpScreenDriver({super.key});

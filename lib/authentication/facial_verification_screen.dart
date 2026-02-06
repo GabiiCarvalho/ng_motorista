@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../pages/map_screen_driver.dart';
 
 class FacialVerificationScreen extends StatefulWidget {
+  final VoidCallback? onVerificationSuccess;
+
+  FacialVerificationScreen({this.onVerificationSuccess});
+
   @override
   _FacialVerificationScreenState createState() =>
       _FacialVerificationScreenState();
@@ -11,41 +15,27 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
   bool _isVerifying = false;
   bool _isVerified = false;
 
-  void _startVerification() {
-    setState(() {
-      _isVerifying = true;
-    });
-
-    // Simula o processo de verificação facial
-    Future.delayed(Duration(seconds: 3), () {
-      setState(() {
-        _isVerifying = false;
-        _isVerified = true;
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.chevron_left),
+          icon: const Icon(Icons.chevron_left),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
-        title: Text('Verificação Facial'),
+        title: const Text('Verificação Facial'),
         backgroundColor: Colors.orange[400],
       ),
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
+              const Text(
                 'Verificação de Segurança',
                 style: TextStyle(
                   fontSize: 28,
@@ -53,7 +43,7 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
                 'Para sua segurança, precisamos confirmar que é realmente você',
                 style: TextStyle(
@@ -62,7 +52,7 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 60),
+              const SizedBox(height: 60),
               Container(
                 width: 200,
                 height: 200,
@@ -98,7 +88,7 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               if (_isVerified)
                 Column(
                   children: [
@@ -110,14 +100,19 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                         color: Colors.green[600],
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => MapScreenDriver()),
-                        );
+                        // Chama o callback se fornecido, senão vai para Dashboard
+                        if (widget.onVerificationSuccess != null) {
+                          widget.onVerificationSuccess!();
+                        } else {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => Dashboard()),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange[400],
@@ -125,10 +120,10 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        minimumSize: Size(double.infinity, 0),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        minimumSize: const Size(double.infinity, 0),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Ir para o Mapa',
                         style: TextStyle(
                           fontSize: 18,
@@ -149,7 +144,7 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                         color: Colors.orange[600],
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     CircularProgressIndicator(
                       valueColor:
                           AlwaysStoppedAnimation<Color>(Colors.orange[400]!),
@@ -158,7 +153,17 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                 )
               else
                 ElevatedButton(
-                  onPressed: _startVerification,
+                  onPressed: () {
+                    setState(() {
+                      _isVerifying = true;
+                    });
+                    Future.delayed(const Duration(seconds: 3), () {
+                      setState(() {
+                        _isVerifying = false;
+                        _isVerified = true;
+                      });
+                    });
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange[400],
                     foregroundColor: Colors.white,

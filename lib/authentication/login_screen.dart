@@ -2,9 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:ng_motorista/authentication/signup_screen.dart';
-import '/authentication/signup_screen_driver.dart';
 import '../global/global_var.dart';
 import '../widgets/loading_dialog.dart';
+import 'package:ng_motorista/methods/common_methods.dart';
+import 'facial_verification_screen.dart';
+import '../pages/dashboard.dart';
 
 class LoginScreenDriver extends StatefulWidget {
   const LoginScreenDriver({super.key});
@@ -53,6 +55,9 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
   }
 
   sendVerificationCode() async {
+    // Verifica conexão antes de enviar código
+    cMethods.checkConnectivity(context);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -70,12 +75,12 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
           // Auto-verificação (se o dispositivo conseguir)
           await FirebaseAuth.instance.signInWithCredential(credential);
           if (!context.mounted) return;
-          Navigator.pop(context);
+          Navigator.pop(context); // Fecha o loading dialog
           verifyDriverInDatabase();
         },
         verificationFailed: (FirebaseAuthException e) {
           if (!context.mounted) return;
-          Navigator.pop(context);
+          Navigator.pop(context); // Fecha o loading dialog
           cMethods.displaySnackBar(
             "Falha na verificação: ${e.message}",
             context,
@@ -83,7 +88,7 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
         },
         codeSent: (String verificationId, int? resendToken) {
           if (!context.mounted) return;
-          Navigator.pop(context);
+          Navigator.pop(context); // Fecha o loading dialog
           setState(() {
             _verificationId = verificationId;
             _showCodeInput = true;
@@ -103,7 +108,7 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
       );
     } catch (errorMsg) {
       if (!context.mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // Fecha o loading dialog
       cMethods.displaySnackBar(
         errorMsg.toString().replaceAll("Exception: ", ""),
         context,
@@ -138,11 +143,11 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
       await FirebaseAuth.instance.signInWithCredential(credential);
 
       if (!context.mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // Fecha o loading dialog
       verifyDriverInDatabase();
     } catch (errorMsg) {
       if (!context.mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // Fecha o loading dialog
       cMethods.displaySnackBar(
         "Código inválido. Tente novamente.",
         context,
@@ -169,12 +174,14 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
             .child(userFirebase.uid);
 
         await driversRef.once().then((snap) {
+          if (!context.mounted) return;
+
           if (snap.snapshot.value != null) {
             final driverData = snap.snapshot.value as Map;
 
-            // Verifica status de bloqueio
+            // Verifica status de bloqueio - USANDO A MESMA LÓGICA DO EXEMPLO
             if (driverData["blockStatus"] == "no") {
-              // Verifica se os documentos foram aprovados
+              // Verifica se os documentos foram aprovados (seu caso)
               if (driverData["documentsApproved"] == true) {
                 // Motorista aprovado - carrega dados globais
                 userName = driverData["name"];
@@ -193,39 +200,53 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
                 driverCompletionRate = driverData["completionRate"] ?? 96;
                 driverWalletBalance = driverData["walletBalance"] ?? 0.0;
 
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                Navigator.pop(context); // Fecha o loading dialog
 
-                // Navega para tela de verificação facial (como no main.dart)
-                Navigator.push(
+                // SEGUINDO O FLUXO DO SEU main.dart:
+                // 1. Primeiro vai para verificação facial
+                // 2. Depois da verificação facial, vai para o Dashboard/MapScreen
+
+                Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (c) => FacialVerificationScreen()),
+                  MaterialPageRoute(
+                    builder: (c) => FacialVerificationScreen(
+                      // Passa callback para após verificação facial bem-sucedida
+                      onVerificationSuccess: () {
+                        // Após verificação facial, vai para o Dashboard
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) =>
+                                Dashboard(), // Ajuste para seu Dashboard
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  (route) => false,
                 );
               } else {
                 // Documentos não aprovados
                 FirebaseAuth.instance.signOut();
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                Navigator.pop(context); // Fecha o loading dialog
                 cMethods.displaySnackBar(
                   "Seus documentos estão em análise. Aguarde a aprovação.",
                   context,
                 );
               }
             } else {
-              // Motorista bloqueado
+              // Motorista bloqueado - MENSAGEM NO PADRÃO DO EXEMPLO
               FirebaseAuth.instance.signOut();
-              if (!context.mounted) return;
-              Navigator.pop(context);
+              Navigator.pop(context); // Fecha o loading dialog
               cMethods.displaySnackBar(
                 "Você está bloqueado. Contate o administrador: suporte@ngmotorista.com",
                 context,
               );
             }
           } else {
-            // Motorista não cadastrado
+            // Motorista não cadastrado - MENSAGEM NO PADRÃO DO EXEMPLO
             FirebaseAuth.instance.signOut();
-            if (!context.mounted) return;
-            Navigator.pop(context);
+            Navigator.pop(context); // Fecha o loading dialog
             cMethods.displaySnackBar(
               "Cadastro não encontrado. Faça o cadastro primeiro.",
               context,
@@ -234,7 +255,7 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
         });
       } catch (errorMsg) {
         if (!context.mounted) return;
-        Navigator.pop(context);
+        Navigator.pop(context); // Fecha o loading dialog
         cMethods.displaySnackBar(
           "Erro ao verificar cadastro: ${errorMsg.toString()}",
           context,
@@ -493,7 +514,9 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: checkIfNetworkIsAvailable,
+                onPressed: () {
+                  checkIfNetworkIsAvailable();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange[400],
                   foregroundColor: Colors.white,
