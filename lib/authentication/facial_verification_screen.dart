@@ -1,5 +1,6 @@
+// facial_verification_screen.dart
 import 'package:flutter/material.dart';
-import '../pages/map_screen_driver.dart';
+import 'package:ng_motorista/main.dart';
 
 class FacialVerificationScreen extends StatefulWidget {
   final VoidCallback? onVerificationSuccess;
@@ -103,14 +104,14 @@ class _FacialVerificationScreenState extends State<FacialVerificationScreen> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // Chama o callback se fornecido, senão vai para Dashboard
+                        // Chama o callback se fornecido, senão vai para MapScreen
                         if (widget.onVerificationSuccess != null) {
                           widget.onVerificationSuccess!();
                         } else {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => Dashboard()),
+                                builder: (context) => MapScreen()),
                           );
                         }
                       },

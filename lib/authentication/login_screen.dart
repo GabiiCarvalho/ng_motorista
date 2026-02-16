@@ -5,8 +5,7 @@ import 'package:ng_motorista/authentication/signup_screen.dart';
 import '../global/global_var.dart';
 import '../widgets/loading_dialog.dart';
 import 'package:ng_motorista/methods/common_methods.dart';
-import 'facial_verification_screen.dart';
-import '../pages/dashboard.dart';
+import 'package:ng_motorista/main.dart' hide FacialVerificationScreen;
 
 class LoginScreenDriver extends StatefulWidget {
   const LoginScreenDriver({super.key});
@@ -20,7 +19,6 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
   TextEditingController verificationCodeController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
 
-  bool _isVerifying = false;
   bool _showCodeInput = false;
   String _verificationId = '';
   String? _phoneNumber;
@@ -34,10 +32,10 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
 
   checkIfNetworkIsAvailable() {
     cMethods.checkConnectivity(context);
-    loginFormValidation();
+    signInFormValidation();
   }
 
-  loginFormValidation() {
+  signInFormValidation() {
     if (phoneTextEditingController.text.trim().length < 10) {
       cMethods.displaySnackBar(
         "Por favor, insira um telefone válido com DDD.",
@@ -45,10 +43,8 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
       );
     } else {
       if (!_showCodeInput) {
-        // Inicia verificação por SMS
         sendVerificationCode();
       } else {
-        // Verifica o código
         verifySMSCode();
       }
     }
@@ -68,19 +64,17 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
     try {
       _phoneNumber = phoneTextEditingController.text.trim();
 
-      // Configuração do Firebase Auth para verificação por SMS
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: '+55$_phoneNumber',
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-verificação (se o dispositivo conseguir)
           await FirebaseAuth.instance.signInWithCredential(credential);
           if (!context.mounted) return;
-          Navigator.pop(context); // Fecha o loading dialog
+          Navigator.pop(context);
           verifyDriverInDatabase();
         },
         verificationFailed: (FirebaseAuthException e) {
           if (!context.mounted) return;
-          Navigator.pop(context); // Fecha o loading dialog
+          Navigator.pop(context);
           cMethods.displaySnackBar(
             "Falha na verificação: ${e.message}",
             context,
@@ -88,7 +82,7 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
         },
         codeSent: (String verificationId, int? resendToken) {
           if (!context.mounted) return;
-          Navigator.pop(context); // Fecha o loading dialog
+          Navigator.pop(context);
           setState(() {
             _verificationId = verificationId;
             _showCodeInput = true;
@@ -99,7 +93,6 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
           );
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          // Timeout - pode pedir para reenviar
           setState(() {
             _verificationId = verificationId;
           });
@@ -108,7 +101,7 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
       );
     } catch (errorMsg) {
       if (!context.mounted) return;
-      Navigator.pop(context); // Fecha o loading dialog
+      Navigator.pop(context);
       cMethods.displaySnackBar(
         errorMsg.toString().replaceAll("Exception: ", ""),
         context,
@@ -133,21 +126,24 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
     );
 
     try {
-      // Cria credencial com código SMS
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: _verificationId,
         smsCode: verificationCodeController.text.trim(),
       );
 
-      // Faz login com a credencial
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      // Método correto: use try-catch em vez de catchError com retorno
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
 
       if (!context.mounted) return;
-      Navigator.pop(context); // Fecha o loading dialog
-      verifyDriverInDatabase();
+      Navigator.pop(context);
+
+      if (userCredential.user != null) {
+        verifyDriverInDatabase();
+      }
     } catch (errorMsg) {
       if (!context.mounted) return;
-      Navigator.pop(context); // Fecha o loading dialog
+      Navigator.pop(context);
       cMethods.displaySnackBar(
         "Código inválido. Tente novamente.",
         context,
@@ -166,101 +162,73 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
             LoadingDialog(messageText: "Verificando cadastro..."),
       );
 
-      try {
-        // Verifica no Realtime Database se o motorista existe
-        DatabaseReference driversRef = FirebaseDatabase.instance
-            .ref()
-            .child("drivers")
-            .child(userFirebase.uid);
+      DatabaseReference driversRef = FirebaseDatabase.instance
+          .ref()
+          .child("drivers")
+          .child(userFirebase.uid);
 
-        await driversRef.once().then((snap) {
-          if (!context.mounted) return;
+      driversRef.once().then((snap) {
+        if (!context.mounted) return;
+        Navigator.pop(context);
 
-          if (snap.snapshot.value != null) {
-            final driverData = snap.snapshot.value as Map;
+        if (snap.snapshot.value != null) {
+          final driverData = snap.snapshot.value as Map;
 
-            // Verifica status de bloqueio - USANDO A MESMA LÓGICA DO EXEMPLO
-            if (driverData["blockStatus"] == "no") {
-              // Verifica se os documentos foram aprovados (seu caso)
-              if (driverData["documentsApproved"] == true) {
-                // Motorista aprovado - carrega dados globais
-                userName = driverData["name"];
-                userPhone = driverData["phone"];
-                userID = userFirebase.uid;
+          if (driverData["blockStatus"] == "no") {
+            // Motorista ativo - carrega dados globais
+            userName = driverData["name"];
+            userPhone = driverData["phone"];
+            userID = userFirebase.uid;
 
-                // Carrega dados específicos do motorista
-                driverVehicleType = driverData["vehicleType"] ?? "Carro";
-                driverVehiclePlate = driverData["vehiclePlate"] ?? "";
-                driverVehicleModel = driverData["vehicleModel"] ?? "";
-                driverVehicleColor = driverData["vehicleColor"] ?? "";
-                driverRating = driverData["rating"] ?? 4.97;
-                driverTotalDeliveries = driverData["totalDeliveries"] ?? 0;
-                driverYears = driverData["years"] ?? 0;
-                driverAcceptanceRate = driverData["acceptanceRate"] ?? 51;
-                driverCompletionRate = driverData["completionRate"] ?? 96;
-                driverWalletBalance = driverData["walletBalance"] ?? 0.0;
+            // Carrega dados específicos do motorista
+            driverVehicleType = driverData["vehicleType"] ?? "Carro";
+            driverVehiclePlate = driverData["vehiclePlate"] ?? "";
+            driverVehicleModel = driverData["vehicleModel"] ?? "";
+            driverVehicleColor = driverData["vehicleColor"] ?? "";
+            driverRating = driverData["rating"] ?? 4.97;
+            driverTotalDeliveries = driverData["totalDeliveries"] ?? 0;
+            driverYears = driverData["years"] ?? 0;
+            driverAcceptanceRate = driverData["acceptanceRate"] ?? 51;
+            driverCompletionRate = driverData["completionRate"] ?? 96;
+            driverWalletBalance = driverData["walletBalance"] ?? 0.0;
 
-                Navigator.pop(context); // Fecha o loading dialog
-
-                // SEGUINDO O FLUXO DO SEU main.dart:
-                // 1. Primeiro vai para verificação facial
-                // 2. Depois da verificação facial, vai para o Dashboard/MapScreen
-
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (c) => FacialVerificationScreen(
-                      // Passa callback para após verificação facial bem-sucedida
-                      onVerificationSuccess: () {
-                        // Após verificação facial, vai para o Dashboard
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (c) =>
-                                Dashboard(), // Ajuste para seu Dashboard
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  (route) => false,
-                );
-              } else {
-                // Documentos não aprovados
-                FirebaseAuth.instance.signOut();
-                Navigator.pop(context); // Fecha o loading dialog
-                cMethods.displaySnackBar(
-                  "Seus documentos estão em análise. Aguarde a aprovação.",
-                  context,
-                );
-              }
+            // Verifica aprovação de documentos (se necessário)
+            if (driverData["documentsApproved"] == true) {
+              // Vai direto para o dashboard como no exemplo
+              Navigator.push(
+                  context, MaterialPageRoute(builder: (c) => MapScreen()));
             } else {
-              // Motorista bloqueado - MENSAGEM NO PADRÃO DO EXEMPLO
+              // Documentos não aprovados
               FirebaseAuth.instance.signOut();
-              Navigator.pop(context); // Fecha o loading dialog
               cMethods.displaySnackBar(
-                "Você está bloqueado. Contate o administrador: suporte@ngmotorista.com",
+                "Seus documentos estão em análise. Aguarde a aprovação.",
                 context,
               );
             }
           } else {
-            // Motorista não cadastrado - MENSAGEM NO PADRÃO DO EXEMPLO
+            // Motorista bloqueado
             FirebaseAuth.instance.signOut();
-            Navigator.pop(context); // Fecha o loading dialog
             cMethods.displaySnackBar(
-              "Cadastro não encontrado. Faça o cadastro primeiro.",
+              "Você está bloqueado. Contate o administrador: comercial.ngexpress@gmail.com",
               context,
             );
           }
-        });
-      } catch (errorMsg) {
+        } else {
+          // Motorista não cadastrado
+          FirebaseAuth.instance.signOut();
+          cMethods.displaySnackBar(
+            "Cadastro não encontrado. Faça o cadastro primeiro.",
+            context,
+          );
+        }
+      }).catchError((errorMsg) {
         if (!context.mounted) return;
-        Navigator.pop(context); // Fecha o loading dialog
+        Navigator.pop(context);
         cMethods.displaySnackBar(
           "Erro ao verificar cadastro: ${errorMsg.toString()}",
           context,
         );
-      }
+      });
     }
   }
 
@@ -268,329 +236,227 @@ class _LoginScreenDriverState extends State<LoginScreenDriver> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          children: [
-            SizedBox(height: 40),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              const SizedBox(height: 60),
 
-            // Logo do app motorista
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.local_shipping,
-                  size: 60,
-                  color: Colors.orange[400],
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'MOTORISTA NG',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange[400],
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Faça entregas e ganhe dinheiro',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: 32),
-
-            // Botões de alternância
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange[400],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: Text(
-                      'Entrar',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (c) => SignUpScreenDriver()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.grey[600],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: Text(
-                      'Cadastrar',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 24),
-
-            if (!_showCodeInput)
-              // Campo de telefone
+              // Logo
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            '🇧🇷',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '+55',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: phoneTextEditingController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          hintText: '(00) 00000-0000',
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                        ),
-                        style: TextStyle(fontSize: 16),
-                      ),
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
                     ),
                   ],
                 ),
-              )
-            else
-              // Campo do código de verificação
-              Column(
-                children: [
-                  Text(
-                    'Digite o código enviado para',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                child: Center(
+                  child: Icon(
+                    Icons.local_shipping,
+                    size: 60,
+                    color: Colors.orange[400],
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    '+55 $_phoneNumber',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[600],
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(6, (index) {
-                      return SizedBox(
-                        width: 45,
-                        height: 60,
-                        child: TextField(
-                          controller: index <
-                                  verificationCodeController.text.length
-                              ? TextEditingController(
-                                  text: verificationCodeController.text[index])
-                              : TextEditingController(),
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  BorderSide(color: Colors.orange[400]!),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            if (value.isNotEmpty) {
-                              String newCode = verificationCodeController.text;
-                              if (newCode.length < 6) {
-                                verificationCodeController.text =
-                                    newCode + value;
-                                if (verificationCodeController.text.length ==
-                                    6) {
-                                  // Foca no próximo campo ou valida automaticamente
-                                  FocusScope.of(context).unfocus();
-                                  verifySMSCode();
-                                }
-                              }
-                            }
-                          },
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              const Text(
+                "Login como Motorista",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              // Campos de entrada
+              Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  children: [
+                    if (!_showCodeInput)
+                      // Campo de telefone
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    }),
-                  ),
-                  SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Não recebeu o código?',
-                        style: TextStyle(color: Colors.grey[600]),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text('🇧🇷', style: TextStyle(fontSize: 20)),
+                                  SizedBox(width: 4),
+                                  Text('+55',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: phoneTextEditingController,
+                                keyboardType: TextInputType.phone,
+                                decoration: InputDecoration(
+                                  hintText: '(00) 00000-0000',
+                                  border: InputBorder.none,
+                                  hintStyle: TextStyle(color: Colors.grey[400]),
+                                ),
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // Campo do código de verificação
+                      Column(
+                        children: [
+                          Text(
+                            'Digite o código enviado para',
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey[600]),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '+55 $_phoneNumber',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[600]),
+                          ),
+                          SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(6, (index) {
+                              return SizedBox(
+                                width: 45,
+                                height: 60,
+                                child: TextField(
+                                  textAlign: TextAlign.center,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 1,
+                                  style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold),
+                                  decoration: InputDecoration(
+                                    counterText: '',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                          color: Colors.orange[400]!),
+                                    ),
+                                  ),
+                                  onChanged: (value) {
+                                    if (value.isNotEmpty) {
+                                      String newCode =
+                                          verificationCodeController.text;
+                                      if (newCode.length < 6) {
+                                        verificationCodeController.text =
+                                            newCode + value;
+                                        if (verificationCodeController
+                                                .text.length ==
+                                            6) {
+                                          FocusScope.of(context).unfocus();
+                                          verifySMSCode();
+                                        }
+                                      }
+                                    }
+                                  },
+                                ),
+                              );
+                            }),
+                          ),
+                          SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Não recebeu o código?',
+                                  style: TextStyle(color: Colors.grey[600])),
+                              TextButton(
+                                onPressed: sendVerificationCode,
+                                child: Text('Reenviar',
+                                    style: TextStyle(
+                                        color: Colors.orange[600],
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
+
+                    const SizedBox(height: 32),
+
+                    // Botão de ação principal
+                    ElevatedButton(
+                      onPressed: () {
+                        checkIfNetworkIsAvailable();
+                      },
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[400],
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 80, vertical: 10)),
+                      child: Text(
+                        _showCodeInput ? "Verificar Código" : "Continuar",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+
+                    // Botão para voltar/alterar número (se estiver na tela de código)
+                    if (_showCodeInput)
                       TextButton(
-                        onPressed: sendVerificationCode,
+                        onPressed: () {
+                          setState(() {
+                            _showCodeInput = false;
+                            verificationCodeController.clear();
+                          });
+                        },
                         child: Text(
-                          'Reenviar',
-                          style: TextStyle(
-                            color: Colors.orange[600],
-                            fontWeight: FontWeight.bold,
-                          ),
+                          "Voltar para alterar número",
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
-
-            SizedBox(height: 24),
-
-            // Botão de continuar
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  checkIfNetworkIsAvailable();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[400],
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                ),
-                child: Text(
-                  _showCodeInput ? 'Verificar Código' : 'Continuar',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ],
                 ),
               ),
-            ),
-            SizedBox(height: 24),
 
-            // Divisor
-            Row(
-              children: [
-                Expanded(child: Divider(color: Colors.grey[300])),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('ou', style: TextStyle(color: Colors.grey[500])),
-                ),
-                Expanded(child: Divider(color: Colors.grey[300])),
-              ],
-            ),
-            SizedBox(height: 24),
+              const SizedBox(height: 12),
 
-            // Link para cadastro se estiver na tela de código
-            if (_showCodeInput)
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _showCodeInput = false;
-                    verificationCodeController.clear();
-                  });
-                },
-                child: Text(
-                  'Voltar para alterar número',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              )
-            else
               // Link para cadastro
               TextButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (c) => SignUpScreenDriver()),
-                  );
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (c) => SignUpScreenDriver()));
                 },
-                child: Text(
-                  'Primeiro acesso? Cadastre-se aqui',
-                  style: TextStyle(color: Colors.grey[600]),
+                child: const Text(
+                  "Primeiro acesso? Cadastre-se aqui",
+                  style: TextStyle(color: Colors.grey),
                 ),
               ),
-
-            SizedBox(height: 40),
-
-            // Termos de uso
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Ao fazer login, você concorda com nossos Termos de Uso e Política de Privacidade',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                  height: 1.5,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
